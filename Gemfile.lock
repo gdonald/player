@@ -273,6 +273,7 @@ DEPENDENCIES
   dotenv-rails
   jbuilder
   jsbundling-rails
+  nokogiri (>= 1.13.4)
   pg (~> 1.1)
   pry
   puma (~> 5.0)
