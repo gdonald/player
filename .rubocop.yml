@@ -1,0 +1,13 @@
+require:
+  - rubocop-rspec
+AllCops:
+  Exclude:
+    - 'db/schema.rb'
+    - 'bin/bundle'
+  NewCops: enable
+Metrics/ClassLength:
+  Max: 1024
+Metrics/MethodLength:
+  Max: 32
+Style/Documentation:
+  Enabled: false
