@@ -1,8 +1,11 @@
 # frozen_string_literal: true
 
 Rails.application.routes.draw do
-  # Define your application routes per the DSL in https://guides.rubyonrails.org/routing.html
+  resources :mp3s, only: %i[index edit update] do
+    collection do
+      get :search
+    end
+  end
 
-  # Defines the root path route ("/")
-  # root "articles#index"
+  root 'mp3s#index'
 end

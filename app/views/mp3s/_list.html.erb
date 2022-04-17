@@ -1,0 +1,21 @@
+
+<table class="table table-striped table-hover table-bordered table-sm">
+  <thead>
+    <tr>
+      <th>Artist</th>
+      <th>Album</th>
+      <th>Title</th>
+      <th>Length</th>
+    </tr>
+  </thead>
+  <tbody>
+    <% mp3s.each do |mp3| %>
+      <tr>
+        <td><%= mp3.artist %></td>
+        <td><%= mp3.album %></td>
+        <td><%= mp3.title %></td>
+        <td><%= mp3.duration %></td>
+      </tr>
+    <% end %>
+  </tbody>
+</table>
