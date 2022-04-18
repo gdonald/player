@@ -16,8 +16,8 @@ class Mp3 < ApplicationRecord
     where(ors.join(' OR '))
   }
 
-  def self.scan
-    Mp3.destroy_all
+  def self.scan(truncate: false)
+    Mp3.destroy_all if truncate
 
     files = Dir.glob("#{ENV['MP3S_PATH']}/**/*.mp3", File::FNM_CASEFOLD)
 
@@ -30,7 +30,12 @@ class Mp3 < ApplicationRecord
           next
         end
 
-        create_mp3(filepath, ref)
+        mp3 = Mp3.find_by(filepath:)
+        if mp3
+          mp3.do_update(ref)
+        else
+          create_mp3(filepath, ref)
+        end
       end
     end
 
@@ -38,20 +43,33 @@ class Mp3 < ApplicationRecord
     nil
   end
 
+  def do_update(ref)
+    tag = ref.tag
+    properties = ref.audio_properties
+
+    update!(title: tag.title,
+            artist: tag.artist,
+            album: tag.album,
+            genre: tag.genre,
+            year: tag.year,
+            track: tag.track,
+            length: properties.length_in_seconds,
+            comment: tag.comment)
+  end
+
   def self.create_mp3(filepath, ref)
     tag = ref.tag
     properties = ref.audio_properties
 
-    mp3 = Mp3.new(filepath:,
-                  title: tag.title,
-                  artist: tag.artist,
-                  album: tag.album,
-                  genre: tag.genre,
-                  year: tag.year,
-                  track: tag.track,
-                  length: properties.length_in_seconds,
-                  comment: tag.comment)
-    mp3.save!
+    Mp3.create!(filepath:,
+                title: tag.title,
+                artist: tag.artist,
+                album: tag.album,
+                genre: tag.genre,
+                year: tag.year,
+                track: tag.track,
+                length: properties.length_in_seconds,
+                comment: tag.comment)
   end
 
   def duration
