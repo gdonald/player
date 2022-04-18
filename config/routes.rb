@@ -5,6 +5,10 @@ Rails.application.routes.draw do
     collection do
       get :search
     end
+    member do
+      get :play
+      get :src
+    end
   end
 
   root 'mp3s#index'

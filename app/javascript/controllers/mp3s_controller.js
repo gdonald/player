@@ -4,13 +4,18 @@ export default class extends Controller {
   connect() {
     const url = this.data.get('url')
 
-    $("#search_query").keyup(function() {
+    $("#search_query").keyup( () => {
       if ( event.which == 13 ) { event.preventDefault() }
+      this.search(url)
+    })
 
-      $.ajax({
-        url: url + '?q=' + $('#search_query').val(),
-        dataType: 'script'
-      })
+    this.search(url)
+  }
+
+  search(url) {
+    $.ajax({
+      url: url + '?q=' + $('#search_query').val(),
+      dataType: 'script'
     })
   }
 }

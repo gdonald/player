@@ -6,15 +6,17 @@
       <th>Album</th>
       <th>Title</th>
       <th>Length</th>
+      <th>&nbsp;</th>
     </tr>
   </thead>
   <tbody>
     <% mp3s.each do |mp3| %>
-      <tr>
+      <tr class="align-middle">
         <td><%= mp3.artist %></td>
         <td><%= mp3.album %></td>
         <td><%= mp3.title %></td>
         <td><%= mp3.duration %></td>
+        <td><%= link_to 'Play', play_mp3_path(mp3.id), class: 'btn btn-primary btn-sm' %></td>
       </tr>
     <% end %>
   </tbody>
