@@ -3,6 +3,7 @@
 require_relative 'boot'
 
 require 'rails/all'
+require 'good_job/engine'
 
 # Require the gems listed in Gemfile, including any gems
 # you've limited to :test, :development, or :production.
@@ -12,6 +13,25 @@ module Player
   class Application < Rails::Application
     # Initialize configuration defaults for originally generated Rails version.
     config.load_defaults 7.0
+
+    config.active_job.queue_adapter = :good_job
+    config.good_job = {
+      preserve_job_records: true,
+      retry_on_unhandled_error: false,
+      on_thread_error: ->(exception) { Raven.capture_exception(exception) },
+      execution_mode: :async,
+      queues: '*',
+      max_threads: 5,
+      poll_interval: 30,
+      shutdown_timeout: 25,
+      enable_cron: false,
+      cron: {
+        # example: {
+        #         cron: '0 * * * *',
+        #         class: 'ExampleJob'
+        # },
+      }
+    }
 
     # Configuration for the application, engines, and railties goes here.
     #

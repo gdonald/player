@@ -54,8 +54,9 @@ gem 'bootsnap', require: false
 # gem "image_processing", "~> 1.2"
 
 gem 'activerecord-session_store'
-gem 'simple_form'
+gem 'good_job'
 gem 'nokogiri', '>= 1.13.4'
+gem 'simple_form'
 gem 'taglib-ruby'
 
 group :development, :test do

@@ -10,23 +10,34 @@ class Mp3 < ApplicationRecord
   scope :search, lambda { |query|
     return all if query.blank?
 
-    query = query.downcase.gsub(/[^-_0-9a-z ]/, '')
+    query = query.downcase.gsub(/[^-_0-9a-z "]/, '')
+
+    phrases = query.scan(/"(.+?)"/).flatten
+    query = query.gsub(/"(.+?)"/, '').strip
+
     parts = query.include?(' ') ? query.split : [query]
+    parts += phrases unless phrases.empty?
+    parts = parts.select(&:present?)
+
     ors = parts.map { |p| "artist ILIKE '%#{p}%' OR album ILIKE '%#{p}%' OR title ILIKE '%#{p}%'" }
     where(ors.join(' OR '))
   }
 
-  def self.scan(truncate: false)
-    Mp3.destroy_all if truncate
+  def self.sync(truncate: false)
+    if truncate
+      Mp3.destroy_all
+    else
+      check_known
+    end
 
-    files = Dir.glob("#{ENV['MP3S_PATH']}/**/*.mp3", File::FNM_CASEFOLD)
+    scan
+  end
 
-    bad = []
-
-    files.each do |filepath|
+  def self.scan
+    Dir.glob("#{ENV['MP3S_PATH']}/**/*.mp3", File::FNM_CASEFOLD).each do |filepath|
       TagLib::FileRef.open(filepath) do |ref|
         if ref.nil?
-          bad << filepath
+          logger.warn("Cannot read file #{filepath}")
           next
         end
 
@@ -38,23 +49,15 @@ class Mp3 < ApplicationRecord
         end
       end
     end
-
-    puts "bad files: #{bad}"
-    nil
   end
 
-  def do_update(ref)
-    tag = ref.tag
-    properties = ref.audio_properties
-
-    update!(title: tag.title,
-            artist: tag.artist,
-            album: tag.album,
-            genre: tag.genre,
-            year: tag.year,
-            track: tag.track,
-            length: properties.length_in_seconds,
-            comment: tag.comment)
+  def self.check_known
+    Mp3.find_each do |mp3|
+      unless File.readable?(mp3.filepath)
+        logger.warn("Cannot find known file #{mp3.filepath}")
+        mp3.destroy
+      end
+    end
   end
 
   def self.create_mp3(filepath, ref)
@@ -70,6 +73,20 @@ class Mp3 < ApplicationRecord
                 track: tag.track,
                 length: properties.length_in_seconds,
                 comment: tag.comment)
+  end
+
+  def do_update(ref)
+    tag = ref.tag
+    properties = ref.audio_properties
+
+    update!(title: tag.title,
+            artist: tag.artist,
+            album: tag.album,
+            genre: tag.genre,
+            year: tag.year,
+            track: tag.track,
+            length: properties.length_in_seconds,
+            comment: tag.comment)
   end
 
   def duration

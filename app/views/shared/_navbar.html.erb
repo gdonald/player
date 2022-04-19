@@ -6,9 +6,9 @@
     </button>
     <div class="collapse navbar-collapse" id="navbarSupportedContent">
       <ul class="navbar-nav me-auto mb-2 mb-lg-0">
-        <!-- <li class="nav-item">
-        <%#= link_to '', queues_path, class: 'nav-link' %>
-        </li> -->
+        <li class="nav-item">
+          <%= link_to 'Sync', sync_mp3s_path, class: 'nav-link', data: { turbo_method: :get, turbo_confirm: 'Are you sure?' } %>
+        </li>
       </ul>
     </div>
   </div>
