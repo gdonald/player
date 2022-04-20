@@ -54,6 +54,7 @@ gem 'bootsnap', require: false
 # gem "image_processing", "~> 1.2"
 
 gem 'activerecord-session_store'
+gem 'acts_as_list'
 gem 'good_job'
 gem 'nokogiri', '>= 1.13.4'
 gem 'simple_form'

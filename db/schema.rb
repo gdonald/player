@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.0].define(version: 2022_04_18_224210) do
+ActiveRecord::Schema[7.0].define(version: 2022_04_20_001153) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pgcrypto"
   enable_extension "plpgsql"
@@ -61,6 +61,23 @@ ActiveRecord::Schema[7.0].define(version: 2022_04_18_224210) do
     t.index ["genre"], name: "index_mp3s_on_genre"
     t.index ["title"], name: "index_mp3s_on_title"
     t.index ["year"], name: "index_mp3s_on_year"
+  end
+
+  create_table "playlist_mp3s", force: :cascade do |t|
+    t.bigint "playlist_id"
+    t.bigint "mp3_id"
+    t.integer "position"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["mp3_id"], name: "index_playlist_mp3s_on_mp3_id"
+    t.index ["playlist_id", "mp3_id"], name: "index_playlist_mp3s_on_playlist_id_and_mp3_id", unique: true
+    t.index ["playlist_id"], name: "index_playlist_mp3s_on_playlist_id"
+  end
+
+  create_table "playlists", force: :cascade do |t|
+    t.string "name", null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
   end
 
   create_table "sessions", force: :cascade do |t|
