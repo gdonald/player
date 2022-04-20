@@ -1,0 +1,4 @@
+<%= simple_form_for playlist, method: :patch, remote: true do |f| %>
+  <%= f.input :name, class: 'form-control' %>
+  <%= f.submit 'Update', class: 'btn btn-primary btn-sm' %>
+<% end %>
