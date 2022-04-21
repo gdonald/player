@@ -2,7 +2,12 @@
 
 Rails.application.routes.draw do
   resources :playlists
-  resources :playlist_mp3s
+  resources :playlist_mp3s do
+    member do
+      post :move_up
+      post :move_down
+    end
+  end
   resources :mp3s, only: %i[index edit update] do
     collection do
       get :search

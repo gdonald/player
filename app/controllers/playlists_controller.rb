@@ -19,7 +19,6 @@ class PlaylistsController < ApplicationController
   def update
     @playlist = Playlist.find_by(id: params[:id])
     @playlist.update(playlist_params)
-    @playlists = Playlist.ordered
   end
 
   def destroy

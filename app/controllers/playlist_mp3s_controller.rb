@@ -18,6 +18,18 @@ class PlaylistMp3sController < ApplicationController
     end
   end
 
+  def move_up
+    playlist_mp3 = PlaylistMp3.find_by(id: params[:id])
+    playlist_mp3.move_higher
+    @playlist = playlist_mp3.playlist
+  end
+
+  def move_down
+    playlist_mp3 = PlaylistMp3.find_by(id: params[:id])
+    playlist_mp3.move_lower
+    @playlist = playlist_mp3.playlist
+  end
+
   def edit
   end
 
