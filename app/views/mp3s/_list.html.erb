@@ -15,7 +15,7 @@
         <td><%= mp3.album %></td>
         <td><%= mp3.title %></td>
         <td><%= mp3.duration %></td>
-        <td><%= link_to 'Play', play_mp3_path(mp3), class: 'btn btn-primary btn-sm' %></td>
+        <td><%= link_to 'Play', play_mp3_path(mp3), remote: true, class: 'btn btn-primary btn-sm' %></td>
         <td><%= link_to 'Queue', playlist_mp3s_path(mp3_id: mp3.id), remote: true, method: :post, class: 'btn btn-primary btn-sm' %></td>
       </tr>
     <% end %>
