@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.0].define(version: 2022_04_20_001153) do
+ActiveRecord::Schema[7.0].define(version: 6) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pgcrypto"
   enable_extension "plpgsql"
@@ -47,6 +47,7 @@ ActiveRecord::Schema[7.0].define(version: 2022_04_20_001153) do
   end
 
   create_table "mp3s", force: :cascade do |t|
+    t.bigint "source_id", null: false
     t.string "filepath", null: false
     t.string "title"
     t.string "artist"
@@ -59,6 +60,7 @@ ActiveRecord::Schema[7.0].define(version: 2022_04_20_001153) do
     t.index ["album"], name: "index_mp3s_on_album"
     t.index ["artist"], name: "index_mp3s_on_artist"
     t.index ["genre"], name: "index_mp3s_on_genre"
+    t.index ["source_id"], name: "index_mp3s_on_source_id"
     t.index ["title"], name: "index_mp3s_on_title"
     t.index ["year"], name: "index_mp3s_on_year"
   end
@@ -76,6 +78,7 @@ ActiveRecord::Schema[7.0].define(version: 2022_04_20_001153) do
 
   create_table "playlists", force: :cascade do |t|
     t.string "name", null: false
+    t.integer "playlist_mp3s_count", default: 0, null: false
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
   end
@@ -87,6 +90,14 @@ ActiveRecord::Schema[7.0].define(version: 2022_04_20_001153) do
     t.datetime "updated_at", null: false
     t.index ["session_id"], name: "index_sessions_on_session_id", unique: true
     t.index ["updated_at"], name: "index_sessions_on_updated_at"
+  end
+
+  create_table "sources", force: :cascade do |t|
+    t.string "path", null: false
+    t.integer "mp3s_count", default: 0, null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["path"], name: "index_sources_on_path", unique: true
   end
 
 end

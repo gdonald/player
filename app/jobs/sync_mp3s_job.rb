@@ -3,7 +3,8 @@
 class SyncMp3sJob < ApplicationJob
   queue_as :default
 
-  def perform(*_args)
-    Mp3.sync
+  def perform(id)
+    source = Source.find_by(id: id)
+    source.sync
   end
 end

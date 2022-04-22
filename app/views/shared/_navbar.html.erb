@@ -7,10 +7,15 @@
     <div class="collapse navbar-collapse" id="navbarSupportedContent">
       <ul class="navbar-nav me-auto mb-2 mb-lg-0">
         <li class="nav-item">
-          <%#%= link_to 'Sync', sync_mp3s_path, class: 'nav-link', confirm: 'Are you sure?' %>
+          <%= link_to 'MP3s', mp3s_path, class: 'nav-link', remote: true %>
+        </li>
+        <li class="nav-item">
           <%= link_to 'Playlists', playlists_path, class: 'nav-link', remote: true %>
         </li>
-      </ul>
+        <li class="nav-item">
+          <%= link_to 'Sources', sources_path, class: 'nav-link', remote: true %>
+        </li>
+     </ul>
       <%= simple_form_for :playlists, class: 'd-flex' do |f| %>
         <%= f.input :playlist, as: :select, collection: Playlist.select_options, selected: @current_playlist.id, class: 'form-select' %>
       <% end %>

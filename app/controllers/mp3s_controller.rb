@@ -19,11 +19,6 @@ class Mp3sController < ApplicationController
     send_file(@mp3.filepath)
   end
 
-  def sync
-    SyncMp3sJob.perform_later
-    redirect_to root_path
-  end
-
   def edit; end
 
   def update; end

@@ -3,6 +3,7 @@
 class CreateMp3s < ActiveRecord::Migration[7.0]
   def change
     create_table :mp3s do |t|
+      t.references :source, null: false
       t.string :filepath, null: false, unique: true
       t.string :title
       t.string :artist

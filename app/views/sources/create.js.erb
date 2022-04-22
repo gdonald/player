@@ -1,0 +1,2 @@
+<% js = escape_javascript( render( partial: 'sources/edit', locals: { source: @source } ) ) %>
+$("#main").html("<%= js %>");
