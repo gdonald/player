@@ -14,6 +14,11 @@
           <td><%= playlist.name %></td>
           <td><%= playlist.playlist_mp3s.size %></td>
           <td><%= link_to 'Edit', edit_playlist_path(playlist), remote: true, class: 'btn btn-primary btn-sm' %></td>
+          <td>
+            <% if playlist.playlist_mp3s.size > 0 %>
+              <%= link_to 'Play', play_playlist_path(playlist), remote: true, class: 'btn btn-primary btn-sm' %>
+            <% end %>
+          </td>
         </tr>
       <% end %>
     </tbody>

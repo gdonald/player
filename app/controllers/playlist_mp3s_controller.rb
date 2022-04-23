@@ -37,5 +37,8 @@ class PlaylistMp3sController < ApplicationController
   end
 
   def destroy
+    playlist_mp3 = PlaylistMp3.find_by(id: params[:id])
+    @playlist = playlist_mp3.playlist
+    playlist_mp3.destroy
   end
 end

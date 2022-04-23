@@ -18,17 +18,21 @@
     <table class="table table-striped table-hover table-bordered table-sm">
       <thead>
         <tr>
+          <td>Album</td>
           <td>Artist</td>
           <td>Song</td>
-          <td>&nbsp;</td>
+          <td>Length</td>
+          <td colspan="2">&nbsp;</td>
         </tr>
       </thead>
       <tbody>
         <% playlist.playlist_mp3s.each do |playlist_mp3| %>
           <tr>
+            <td><%= playlist_mp3.mp3.album %></td>
             <td><%= playlist_mp3.mp3.artist %></td>
             <td><%= playlist_mp3.mp3.title %></td>
-            <td>
+            <td><%= playlist_mp3.mp3.duration %></td>
+            <td class="col-2">
               <% if playlist_mp3.first? %>
                 <%= link_to 'Move Up', 'javascript:void(0);', method: :post, remote: true, class: "btn btn-secondary btn-sm" %>
               <% else %>
@@ -40,6 +44,9 @@
               <% else %>
                 <%= link_to 'Move Down', move_down_playlist_mp3_path(playlist_mp3), method: :post, remote: true, class: "btn btn-primary btn-sm" %>
               <% end %>
+            </td>
+            <td>
+              <%= link_to 'Delete', playlist_mp3_path(playlist_mp3), method: :delete, remote: true, class: "btn btn-primary btn-sm" %>
             </td>
           </tr>
         <% end %>

@@ -1,0 +1,27 @@
+<div class="row">
+  <div class="col-12">
+    <h5><%= @playlist.name %></h5>
+    <table class="table table-striped table-hover table-bordered table-sm">
+      <thead>
+        <tr>
+          <td>&nbsp;</td>
+          <td>Song</td>
+          <td>Artist</td>
+          <td>Album</td>
+          <td>Length</td>
+        </tr>
+      </thead>
+      <tbody>
+        <% @playlist.playlist_mp3s.each do |playlist_mp3| %>
+          <tr>
+            <td class="text-end"><%= '➜' if playlist_mp3.mp3_id == session[:current_playlist_mp3_id] %></td>
+            <td><%= playlist_mp3.mp3.title %></td>
+            <td><%= playlist_mp3.mp3.artist %></td>
+            <td><%= playlist_mp3.mp3.album %></td>
+            <td><%= playlist_mp3.mp3.duration %></td>
+          </tr>
+        <% end %>
+      </tbody>
+    </table>
+  </div>
+</div>

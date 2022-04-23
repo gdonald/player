@@ -36,3 +36,4 @@
 /node_modules
 .env
 yarn-error.log
+.DS_Store

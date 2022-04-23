@@ -1,7 +1,12 @@
 # frozen_string_literal: true
 
 Rails.application.routes.draw do
-  resources :playlists
+  resources :playlists do
+    member do
+      get :play
+      get :next
+    end
+  end
   resources :playlist_mp3s do
     member do
       post :move_up

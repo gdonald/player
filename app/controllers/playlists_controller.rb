@@ -24,6 +24,20 @@ class PlaylistsController < ApplicationController
   def destroy
   end
 
+  def play
+    @playlist = Playlist.find_by(id: params[:id])
+    session[:current_playlist_id] = @playlist.id
+    @mp3 = @playlist.mp3s.first
+    session[:current_playlist_mp3_id] = @mp3.id
+  end
+
+  def next
+    @playlist = Playlist.find_by(id: session[:current_playlist_id])
+    @current_mp3 = Mp3.find_by(id: session[:current_playlist_mp3_id])
+    @mp3 = @playlist.next_mp3(@current_mp3)
+    session[:current_playlist_mp3_id] = @mp3.id
+  end
+
   private
 
   def playlist_params

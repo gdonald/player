@@ -16,9 +16,6 @@
           <%= link_to 'Sources', sources_path, class: 'nav-link', remote: true %>
         </li>
      </ul>
-      <%= simple_form_for :playlists, class: 'd-flex' do |f| %>
-        <%= f.input :playlist, as: :select, collection: Playlist.select_options, selected: @current_playlist.id, class: 'form-select' %>
-      <% end %>
     </div>
   </div>
 </nav>

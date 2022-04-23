@@ -11,4 +11,12 @@ class Playlist < ApplicationRecord
   def self.select_options
     ordered.collect { |p| [p.name, p.id] }
   end
+
+  def next_mp3(mp3)
+    current = playlist_mp3s.find_by(mp3:)
+    lower_item = current.lower_item
+    return playlist_mp3s.first.mp3 unless lower_item
+
+    lower_item.mp3
+  end
 end
