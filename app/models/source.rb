@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 class Source < ApplicationRecord
   scope :ordered, -> { order(:path) }
 

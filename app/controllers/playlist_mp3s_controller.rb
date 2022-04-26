@@ -1,12 +1,11 @@
+# frozen_string_literal: true
+
 class PlaylistMp3sController < ApplicationController
-  def index
-  end
+  def index; end
 
-  def show
-  end
+  def show; end
 
-  def new
-  end
+  def new; end
 
   def create
     playlist = current_playlist
@@ -30,11 +29,9 @@ class PlaylistMp3sController < ApplicationController
     @playlist = playlist_mp3.playlist
   end
 
-  def edit
-  end
+  def edit; end
 
-  def update
-  end
+  def update; end
 
   def destroy
     playlist_mp3 = PlaylistMp3.find_by(id: params[:id])
