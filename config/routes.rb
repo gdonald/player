@@ -5,6 +5,7 @@ Rails.application.routes.draw do
     member do
       get :play
       get :next
+      get :prev
     end
   end
   resources :playlist_mp3s do

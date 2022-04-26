@@ -19,4 +19,12 @@ class Playlist < ApplicationRecord
 
     lower_item.mp3
   end
+
+  def prev_mp3(mp3)
+    current = playlist_mp3s.find_by(mp3:)
+    higher_item = current.higher_item
+    return playlist_mp3s.last.mp3 unless higher_item
+
+    higher_item.mp3
+  end
 end

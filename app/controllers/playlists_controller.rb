@@ -34,6 +34,13 @@ class PlaylistsController < ApplicationController
     session[:current_playlist_mp3_id] = @mp3.id
   end
 
+  def prev
+    @playlist = Playlist.find_by(id: session[:current_playlist_id])
+    @current_mp3 = Mp3.find_by(id: session[:current_playlist_mp3_id])
+    @mp3 = @playlist.prev_mp3(@current_mp3)
+    session[:current_playlist_mp3_id] = @mp3.id
+  end
+
   private
 
   def playlist_params

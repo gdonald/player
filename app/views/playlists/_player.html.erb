@@ -1,9 +1,21 @@
 <nav class="navbar fixed-bottom navbar-light bg-light mb-0">
   <div class="container-fluid" data-controller="playlists-player" data-playlists-player-url="<%= next_playlist_path %>">
     <div class="col-8 text-center">
-      <audio controls autoplay src="<%= src_mp3_path(mp3) %>" preload="auto">
-        Your browser does not support the <code>audio</code> element.
-      </audio>
+      <div class="row">
+        <div class="col-2"></div>
+        <div class="col-2 text-center pt-2">
+          <%= link_to 'Prev', prev_playlist_path, remote: true %>
+        </div>
+        <div class="col-4 text-center align-middle">
+          <audio controls autoplay src="<%= src_mp3_path(mp3) %>" preload="auto">
+            Your browser does not support the <code>audio</code> element.
+          </audio>
+        </div>
+        <div class="col-2 text-center pt-2">
+          <%= link_to 'Next', next_playlist_path, remote: true %>
+        </div>
+        <div class="col-2"></div>
+      </div>
     </div>
     <div class="col-4">
       <table class="table table-striped table-bordered">
