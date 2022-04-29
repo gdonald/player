@@ -28,4 +28,34 @@ class Mp3 < ApplicationRecord
   def duration
     Time.at(length).utc.strftime('%M:%S')
   end
+
+  def self.create_mp3(filepath, ref)
+    tag = ref.tag
+    properties = ref.audio_properties
+
+    Mp3.create!(filepath:,
+                source: self,
+                title: tag.title,
+                artist: tag.artist,
+                album: tag.album,
+                genre: tag.genre,
+                year: tag.year,
+                track: tag.track,
+                length: properties.length_in_seconds,
+                comment: tag.comment)
+  end
+
+  def do_update(ref)
+    tag = ref.tag
+    properties = ref.audio_properties
+
+    update!(title: tag.title,
+            artist: tag.artist,
+            album: tag.album,
+            genre: tag.genre,
+            year: tag.year,
+            track: tag.track,
+            length: properties.length_in_seconds,
+            comment: tag.comment)
+  end
 end

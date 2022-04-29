@@ -29,7 +29,7 @@ class Source < ApplicationRecord
         if mp3
           mp3.do_update(ref)
         else
-          create_mp3(filepath, ref)
+          Mp3.create_mp3(filepath, ref)
         end
       end
     end
@@ -42,35 +42,5 @@ class Source < ApplicationRecord
         mp3.destroy
       end
     end
-  end
-
-  def create_mp3(filepath, ref)
-    tag = ref.tag
-    properties = ref.audio_properties
-
-    Mp3.create!(filepath:,
-                source: self,
-                title: tag.title,
-                artist: tag.artist,
-                album: tag.album,
-                genre: tag.genre,
-                year: tag.year,
-                track: tag.track,
-                length: properties.length_in_seconds,
-                comment: tag.comment)
-  end
-
-  def do_update(ref)
-    tag = ref.tag
-    properties = ref.audio_properties
-
-    update!(title: tag.title,
-            artist: tag.artist,
-            album: tag.album,
-            genre: tag.genre,
-            year: tag.year,
-            track: tag.track,
-            length: properties.length_in_seconds,
-            comment: tag.comment)
   end
 end

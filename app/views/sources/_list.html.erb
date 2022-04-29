@@ -12,7 +12,7 @@
       <tr>
         <th>Path</th>
         <th>MP3s</th>
-        <th colspan="2">&nbsp;</th>
+        <th>&nbsp;</th>
       </tr>
     </thead>
     <tbody>
@@ -20,8 +20,10 @@
         <tr class="align-middle">
           <td><%= source.path %></td>
           <td><%= source.mp3s.size %>
-          <td><%= link_to 'Edit', edit_source_path(source), remote: true, class: 'btn btn-primary btn-sm' %></td>
-          <td><%= link_to 'Scan', sync_source_path(source), remote: true, class: 'btn btn-primary btn-sm' %></td>
+          <td class="col-1">
+            <%= link_to 'Edit', edit_source_path(source), remote: true, class: 'btn btn-primary btn-sm' %>
+            <%= link_to 'Scan', sync_source_path(source), remote: true, class: 'btn btn-primary btn-sm' %>
+          </td>
         </tr>
       <% end %>
     </tbody>
