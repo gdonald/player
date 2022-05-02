@@ -24,21 +24,22 @@ class PlaylistsController < ApplicationController
 
   def play
     @playlist = Playlist.find_by(id: params[:id])
+    @mp3s = @playlist.mp3s
     session[:current_playlist_id] = @playlist.id
   end
 
   def next
     @playlist = Playlist.find_by(id: session[:current_playlist_id])
-    @current_mp3 = Mp3.find_by(id: session[:current_playlist_mp3_id])
+    @current_mp3 = Mp3.find_by(id: session[:current_mp3_id])
     @mp3 = @playlist.next_mp3(@current_mp3)
-    session[:current_playlist_mp3_id] = @mp3.id
+    session[:current_mp3_id] = @mp3.id
   end
 
   def prev
     @playlist = Playlist.find_by(id: session[:current_playlist_id])
-    @current_mp3 = Mp3.find_by(id: session[:current_playlist_mp3_id])
+    @current_mp3 = Mp3.find_by(id: session[:current_mp3_id])
     @mp3 = @playlist.prev_mp3(@current_mp3)
-    session[:current_playlist_mp3_id] = @mp3.id
+    session[:current_mp3_id] = @mp3.id
   end
 
   private

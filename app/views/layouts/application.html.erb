@@ -9,10 +9,18 @@
     <%= javascript_include_tag "application", defer: true %>
   </head>
   <body>
-    <%= render partial: 'shared/navbar' %>
-    <div class="container-fluid" id="main">
-      <%= yield %>
+    <div class="container-fluid overflow-hidden">
+      <div class="row vh-100 overflow-auto">
+        <%= render partial: 'shared/sidebar' %>
+        <div class="col d-flex flex-column h-sm-100">
+          <main class="row overflow-auto">
+            <div id="main" class="col pt-1">
+              <%= yield %>
+            </div>
+          </main>
+          <footer id="player" class="row py-1 mt-auto"></footer>
+        </div>
+      </div>
     </div>
-    <div id="player"></div>
   </body>
 </html>

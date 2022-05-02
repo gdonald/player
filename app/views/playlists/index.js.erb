@@ -1,2 +1,2 @@
-<% js = escape_javascript( render( partial: 'playlists/list', locals: { playlists: @playlists } ) ) %>
-$("#main").html("<%= js %>");
+<% html = escape_javascript( render( partial: 'playlists/list', locals: { playlists: @playlists } ) ) %>
+$("#main").html("<%= html %>");

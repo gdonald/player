@@ -29,7 +29,7 @@ class Source < ApplicationRecord
         if mp3
           mp3.do_update(ref)
         else
-          Mp3.create_mp3(filepath, ref)
+          Mp3.create_mp3(self, filepath, ref)
         end
       end
     end

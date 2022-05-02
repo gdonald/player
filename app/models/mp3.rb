@@ -29,12 +29,12 @@ class Mp3 < ApplicationRecord
     Time.at(length).utc.strftime('%M:%S')
   end
 
-  def self.create_mp3(filepath, ref)
+  def self.create_mp3(src, filepath, ref)
     tag = ref.tag
     properties = ref.audio_properties
 
     Mp3.create!(filepath:,
-                source: self,
+                source: src,
                 title: tag.title,
                 artist: tag.artist,
                 album: tag.album,
