@@ -5,7 +5,7 @@
       <th>Album</th>
       <th>Title</th>
       <th>Length</th>
-      <th colspan="2">&nbsp;</th>
+      <th class="col-2">&nbsp;</th>
     </tr>
   </thead>
   <tbody>
@@ -15,8 +15,11 @@
         <td><%= mp3.album %></td>
         <td><%= mp3.title %></td>
         <td><%= mp3.duration %></td>
-        <td><%= link_to 'Play', play_mp3_path(mp3), remote: true, class: 'btn btn-primary btn-sm' %></td>
-        <td><%= link_to 'Queue', playlist_mp3s_path(mp3_id: mp3.id), remote: true, method: :post, class: 'btn btn-primary btn-sm' %></td>
+        <td>
+          <%= link_to 'Edit', edit_mp3_path(mp3), remote: true, class: 'btn btn-primary btn-sm' %>
+          <%= link_to 'Play', play_mp3_path(mp3), remote: true, class: 'btn btn-primary btn-sm' %>
+          <%= link_to 'Queue', playlist_mp3s_path(mp3_id: mp3.id), remote: true, method: :post, class: 'btn btn-primary btn-sm' %>
+        </td>
       </tr>
     <% end %>
   </tbody>

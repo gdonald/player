@@ -5,7 +5,7 @@
       <tr>
         <th>Name</th>
         <th>MP3s</th>
-        <th colspan="2">&nbsp;</th>
+        <th class="col-1">&nbsp;</th>
       </tr>
     </thead>
     <tbody>
@@ -13,8 +13,8 @@
         <tr class="align-middle">
           <td><%= playlist.name %></td>
           <td><%= playlist.playlist_mp3s.size %></td>
-          <td><%= link_to 'Edit', edit_playlist_path(playlist), remote: true, class: 'btn btn-primary btn-sm' %></td>
           <td>
+            <%= link_to 'Edit', edit_playlist_path(playlist), remote: true, class: 'btn btn-primary btn-sm' %>
             <% if playlist.playlist_mp3s.size > 0 %>
               <%= link_to 'Play', play_playlist_path(playlist), remote: true, class: 'btn btn-primary btn-sm' %>
             <% end %>

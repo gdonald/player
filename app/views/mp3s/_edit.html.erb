@@ -1,0 +1,27 @@
+<div class="row pt-2">
+  <div class="col-12">
+    <h5>
+      <%= link_to 'Mp3s', mp3s_path, remote: true %>
+      &gt;
+      <%= mp3.title %>
+    </h5>
+    <div class="card">
+      <div class="card-body">
+        <%= simple_form_for mp3, method: :patch, remote: true do |f| %>
+          <div class="mb-3">
+            <%= f.input :title, class: 'form-control' %>
+          </div>
+          <div class="mb-3">
+            <%= f.input :album, class: 'form-control' %>
+          </div>
+          <div class="mb-3">
+            <%= f.input :artist, class: 'form-control' %>
+          </div>
+          <div>
+            <%= f.submit 'Update', class: 'btn btn-primary btn-sm' %>
+          </div>
+        <% end %>
+      </div>
+    </div>
+  </div>
+</div>

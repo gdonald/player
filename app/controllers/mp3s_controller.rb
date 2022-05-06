@@ -19,7 +19,28 @@ class Mp3sController < ApplicationController
     send_file(@mp3.filepath)
   end
 
-  def edit; end
+  def edit
+    @mp3 = Mp3.find_by(id: params[:id])
+  end
 
-  def update; end
+  def update
+    @mp3 = Mp3.find_by(id: params[:id])
+    @mp3.update(mp3_params)
+
+    TagLib::MPEG::File.open(@mp3.filepath) do |file|
+      tag = file.id3v2_tag
+
+      tag.title = @mp3.title
+      tag.album = @mp3.album
+      tag.artist = @mp3.artist
+
+      file.save
+    end
+  end
+
+  private
+
+  def mp3_params
+    params.require(:mp3).permit(:title, :album, :artist)
+  end
 end
