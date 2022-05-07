@@ -6,3 +6,7 @@
 #
 #   movies = Movie.create([{ name: "Star Wars" }, { name: "Lord of the Rings" }])
 #   Character.create(name: "Luke", movie: movies.first)
+
+artist = Artist.create!(name: Artist::UNKNOWN)
+Album.create!(artist:, name: Album::UNKNOWN)
+Playlist.create!(name: Playlist::RECENT)

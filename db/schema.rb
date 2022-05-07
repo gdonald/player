@@ -10,10 +10,28 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.0].define(version: 6) do
+ActiveRecord::Schema[7.0].define(version: 8) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pgcrypto"
   enable_extension "plpgsql"
+
+  create_table "albums", force: :cascade do |t|
+    t.bigint "artist_id", null: false
+    t.string "name", null: false
+    t.integer "mp3s_count", default: 0, null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["artist_id", "name"], name: "index_albums_on_artist_id_and_name", unique: true
+    t.index ["artist_id"], name: "index_albums_on_artist_id"
+  end
+
+  create_table "artists", force: :cascade do |t|
+    t.string "name", null: false
+    t.integer "mp3s_count", default: 0, null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["name"], name: "index_artists_on_name", unique: true
+  end
 
   create_table "good_job_processes", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
     t.datetime "created_at", null: false
@@ -48,20 +66,23 @@ ActiveRecord::Schema[7.0].define(version: 6) do
 
   create_table "mp3s", force: :cascade do |t|
     t.bigint "source_id", null: false
+    t.bigint "artist_id", null: false
+    t.bigint "album_id", null: false
     t.string "filepath", null: false
     t.string "title"
-    t.string "artist"
-    t.string "album"
     t.string "genre"
     t.integer "year"
     t.integer "track"
     t.integer "length"
     t.text "comment"
-    t.index ["album"], name: "index_mp3s_on_album"
-    t.index ["artist"], name: "index_mp3s_on_artist"
+    t.index ["album_id"], name: "index_mp3s_on_album_id"
+    t.index ["artist_id", "album_id", "title", "length"], name: "index_mp3s_on_artist_id_and_album_id_and_title_and_length", unique: true
+    t.index ["artist_id"], name: "index_mp3s_on_artist_id"
     t.index ["genre"], name: "index_mp3s_on_genre"
+    t.index ["length"], name: "index_mp3s_on_length"
     t.index ["source_id"], name: "index_mp3s_on_source_id"
     t.index ["title"], name: "index_mp3s_on_title"
+    t.index ["track"], name: "index_mp3s_on_track"
     t.index ["year"], name: "index_mp3s_on_year"
   end
 

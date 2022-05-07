@@ -32,8 +32,8 @@
       <tbody>
         <% playlist.playlist_mp3s.each do |playlist_mp3| %>
           <tr>
-            <td><%= playlist_mp3.mp3.album %></td>
-            <td><%= playlist_mp3.mp3.artist %></td>
+            <td><%= playlist_mp3.mp3.album.name %></td>
+            <td><%= playlist_mp3.mp3.artist.name %></td>
             <td><%= playlist_mp3.mp3.title %></td>
             <td><%= playlist_mp3.mp3.duration %></td>
             <td class="col-2">

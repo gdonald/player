@@ -4,10 +4,12 @@ require 'taglib'
 
 class Mp3 < ApplicationRecord
   belongs_to :source, counter_cache: true
+  belongs_to :album, counter_cache: true
+  belongs_to :artist, counter_cache: true
 
   validates :filepath, presence: true
 
-  scope :ordered, -> { order(:artist, :album, :title) }
+  scope :ordered, -> { includes(:artist, :album).order('artists.name, albums.name, mp3s.title') }
 
   scope :search, lambda { |query|
     return all if query.blank?
@@ -21,41 +23,49 @@ class Mp3 < ApplicationRecord
     parts += phrases unless phrases.empty?
     parts = parts.select(&:present?)
 
-    ors = parts.map { |p| "artist ILIKE '%#{p}%' OR album ILIKE '%#{p}%' OR title ILIKE '%#{p}%'" }
-    where(ors.join(' OR '))
+    ors = parts.map { |p| "artists.name ILIKE '%#{p}%' OR albums.name ILIKE '%#{p}%' OR mp3s.title ILIKE '%#{p}%'" }
+    includes(:artist, :album).where(ors.join(' OR '))
   }
 
   def duration
     Time.at(length).utc.strftime('%M:%S')
   end
 
-  def self.create_mp3(src, filepath, ref)
+  def self.create_mp3(source, filepath, ref)
     tag = ref.tag
     properties = ref.audio_properties
+    artist = Artist.find_unknown(name: tag.artist)
+    album = Album.find_unknown(artist:, name: tag.album)
+    title = tag.title
+    length = properties.length_in_seconds
 
-    Mp3.create!(filepath:,
-                source: src,
-                title: tag.title,
-                artist: tag.artist,
-                album: tag.album,
-                genre: tag.genre,
-                year: tag.year,
-                track: tag.track,
-                length: properties.length_in_seconds,
-                comment: tag.comment)
+    begin
+      Mp3.create!(filepath:, source:, artist:, album:, title:, length:,
+                  genre: tag.genre,
+                  year: tag.year,
+                  track: tag.track,
+                  comment: tag.comment)
+    rescue ActiveRecord::RecordNotUnique
+      logger.warn "Duplicate: artist: #{artist} album: #{album} title: #{title} length: #{length}"
+    end
   end
 
   def do_update(ref)
     tag = ref.tag
     properties = ref.audio_properties
+    artist = Artist.find_unknown(name: tag.artist)
+    album = Album.find_unknown(artist:, name: tag.album)
+    title = tag.title
+    length = properties.length_in_seconds
 
-    update!(title: tag.title,
-            artist: tag.artist,
-            album: tag.album,
-            genre: tag.genre,
-            year: tag.year,
-            track: tag.track,
-            length: properties.length_in_seconds,
-            comment: tag.comment)
+    begin
+      update!(artist:, album:, title:, length:,
+              genre: tag.genre,
+              year: tag.year,
+              track: tag.track,
+              comment: tag.comment)
+    rescue ActiveRecord::RecordNotUnique
+      logger.warn "Duplicate: artist: #{artist} album: #{album} title: #{title} length: #{length}"
+    end
   end
 end

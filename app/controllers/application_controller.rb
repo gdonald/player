@@ -5,7 +5,6 @@ class ApplicationController < ActionController::Base
 
   def current_playlist
     @current_playlist = Playlist.find_by(id: session[:current_playlist_id])
-    @current_playlist ||= Playlist.last
-    @current_playlist ||= Playlist.create(name: 'Recent')
+    @current_playlist ||= Playlist.find_by(name: Playlist::RECENT)
   end
 end

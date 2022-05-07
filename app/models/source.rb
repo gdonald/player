@@ -8,11 +8,18 @@ class Source < ApplicationRecord
   def sync(truncate: false)
     if truncate
       Mp3.destroy_all
+      Album.destroy_all
+      Artist.destroy_all
     else
       check_known
     end
 
-    scan
+    begin
+      scan
+    rescue => exception
+      puts exception.backtrace
+      raise
+    end
   end
 
   private
