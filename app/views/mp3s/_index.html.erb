@@ -1,7 +1,7 @@
 <div class="pt-2">
   <h5>MP3s</h5>
   <div data-controller="mp3s" data-mp3s-url="<%= search_mp3s_path %>">
-    <%= simple_form_for :search do |f| %>
+    <%= simple_form_for :search, html: { onsubmit: 'return false' } do |f| %>
       <div class="mb-3">
         <%= f.input :query, label: 'Search', required: false, label: false, placeholder: 'Search term', input_html: { value: session[:q] || '' } %>
       </div>
