@@ -10,8 +10,8 @@ application.register("mp3-play", Mp3PlayController)
 import Mp3sController from "./mp3s_controller.js"
 application.register("mp3s", Mp3sController)
 
-import PlaylistsPlayerController from "./playlists_player_controller.js"
-application.register("playlists-player", PlaylistsPlayerController)
-
 import PlaylistsPlayController from "./playlists_play_controller.js"
 application.register("playlists-play", PlaylistsPlayController)
+
+import PlaylistsPlayerController from "./playlists_player_controller.js"
+application.register("playlists-player", PlaylistsPlayerController)

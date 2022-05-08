@@ -11,11 +11,18 @@ class Mp3 < ApplicationRecord
 
   scope :ordered, -> { includes(:artist, :album).order('artists.name, albums.name, mp3s.title') }
 
+  CLEAN = /[^-_0-9a-zA-Z .,()"]/
+
   scope :search, lambda { |query|
     return all if query.blank?
 
-    query = query.downcase.gsub(/[^-_0-9a-z "]/, '')
+    artist = query.scan(/artist:"(.+?)"/)
+    query = query.gsub(/artist:"(.+?)"/, '').strip
 
+    album = query.scan(/album:"(.+?)"/)
+    query = query.gsub(/album:"(.+?)"/, '').strip
+
+    query = query.downcase.gsub(CLEAN, '')
     phrases = query.scan(/"(.+?)"/).flatten
     query = query.gsub(/"(.+?)"/, '').strip
 
@@ -23,8 +30,22 @@ class Mp3 < ApplicationRecord
     parts += phrases unless phrases.empty?
     parts = parts.select(&:present?)
 
+    result = includes(:artist, :album)
+
     ors = parts.map { |p| "artists.name ILIKE '%#{p}%' OR albums.name ILIKE '%#{p}%' OR mp3s.title ILIKE '%#{p}%'" }
-    includes(:artist, :album).where(ors.join(' OR '))
+    result = result.where(ors.join(' OR ')) if ors.any?
+
+    if artist.any?
+      artist = artist.first.first.gsub(CLEAN, '')
+      result = result.where("artists.name ILIKE '#{artist}'")
+    end
+
+    if album.any?
+      album = album.first.first.gsub(CLEAN, '')
+      result = result.where("albums.name ILIKE '#{album}'")
+    end
+
+    result
   }
 
   def duration
