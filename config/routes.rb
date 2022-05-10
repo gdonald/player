@@ -13,6 +13,9 @@ Rails.application.routes.draw do
       post :move_up
       post :move_down
     end
+    collection do
+      post :add
+    end
   end
   resources :mp3s, only: %i[index edit update] do
     collection do

@@ -7,6 +7,20 @@ class PlaylistMp3sController < ApplicationController
 
   def new; end
 
+  def add
+    playlist = Playlist.find_by(id: params['playlist_mp3s']['playlist_id'])
+    head :ok unless playlist
+
+    params['mp3s'].each do |id|
+      mp3 = Mp3.find_by(id:)
+      next unless mp3
+
+      playlist.mp3s << mp3
+    end
+
+    head :ok
+  end
+
   def create
     playlist = current_playlist
     mp3 = Mp3.find_by(id: params[:mp3_id])

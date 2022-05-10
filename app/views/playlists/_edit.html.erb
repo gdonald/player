@@ -3,7 +3,7 @@
     <h5>
       <%= link_to 'Playlists', playlists_path, remote: true %>
       &gt;
-      Edit Playlist
+      Edit Playlist &quot;<%= playlist.name %>&quot;
     </h5>
     <div class="card">
       <div class="card-body">
@@ -38,13 +38,13 @@
             <td><%= playlist_mp3.mp3.duration %></td>
             <td class="col-2">
               <% if playlist_mp3.first? %>
-                <%= link_to 'Move Up', 'javascript:void(0);', method: :post, remote: true, class: "btn btn-secondary btn-sm" %>
+                <%= link_to 'Move Up', 'javascript:;', method: :post, remote: true, class: "btn btn-secondary btn-sm" %>
               <% else %>
                 <%= link_to 'Move Up', move_up_playlist_mp3_path(playlist_mp3), method: :post, remote: true, class: "btn btn-primary btn-sm" %>
               <% end %>
 
               <% if playlist_mp3.last? %>
-                <%= link_to 'Move Down', 'javascript:void(0);', method: :post, remote: true, class: "btn btn-secondary btn-sm" %>
+                <%= link_to 'Move Down', 'javascript:;', method: :post, remote: true, class: "btn btn-secondary btn-sm" %>
               <% else %>
                 <%= link_to 'Move Down', move_down_playlist_mp3_path(playlist_mp3), method: :post, remote: true, class: "btn btn-primary btn-sm" %>
               <% end %>
