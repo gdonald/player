@@ -4,12 +4,17 @@ export default class extends Controller {
   connect() {
     const url = this.data.get('url')
 
-    $("#search_query").keyup( (event) => {
+    $('#search_query').keyup((event) => {
       if ( event.which == 13 ) { event.preventDefault() }
       this.search(url)
     })
 
     this.search(url)
+
+    $(document).on('change', 'input#all', function() {
+      var checkboxes = $('tbody.mp3s').find(':checkbox');
+      checkboxes.prop('checked', $(this).is(':checked'));
+    });
   }
 
   search(url) {
