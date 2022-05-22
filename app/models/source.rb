@@ -16,8 +16,8 @@ class Source < ApplicationRecord
 
     begin
       scan
-    rescue => exception
-      puts exception.backtrace
+    rescue StandardError => e
+      puts e.backtrace
       raise
     end
   end

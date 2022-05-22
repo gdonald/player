@@ -10,9 +10,9 @@ gem 'rails'
 gem 'cssbundling-rails'
 gem 'jsbundling-rails'
 gem 'pg'
+gem 'puma'
 gem 'sprockets-rails'
 gem 'stimulus-rails'
-gem 'puma'
 gem 'tzinfo-data', platforms: %i[mingw mswin x64_mingw jruby]
 
 gem 'activerecord-session_store'
