@@ -27,8 +27,7 @@ class PlaylistsController < ApplicationController
   def destroy; end
 
   def play
-    @playlist = Playlist.find_by(id: params[:id])
-    @mp3s = @playlist.mp3s
+    @playlist = Playlist.includes(mp3s: :album).includes(mp3s: :artist).where(id: params[:id]).first
     session[:current_playlist_id] = @playlist.id
   end
 

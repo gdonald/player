@@ -22,6 +22,6 @@ class Album < ApplicationRecord
   end
 
   def to_s
-    "#{artist}: #{name}"
+    name
   end
 end
