@@ -18,7 +18,7 @@ gem 'tzinfo-data', platforms: %i[mingw mswin x64_mingw jruby]
 gem 'activerecord-session_store'
 gem 'acts_as_list'
 gem 'good_job'
-gem 'nokogiri', '>= 1.13.4'
+gem 'nokogiri', '>= 1.13.6'
 gem 'simple_form'
 gem 'taglib-ruby'
 

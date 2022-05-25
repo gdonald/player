@@ -111,7 +111,7 @@ GEM
       raabro (~> 1.4)
     globalid (1.0.0)
       activesupport (>= 5.0)
-    good_job (2.15.0)
+    good_job (2.15.1)
       activejob (>= 5.2.0)
       activerecord (>= 5.2.0)
       concurrent-ruby (>= 1.0.2)
@@ -257,7 +257,7 @@ GEM
     strscan (3.0.3)
     taglib-ruby (1.1.2)
     thor (1.2.1)
-    timeout (0.2.0)
+    timeout (0.3.0)
     tzinfo (2.0.4)
       concurrent-ruby (~> 1.0)
     unicode-display_width (2.1.0)
@@ -290,7 +290,7 @@ DEPENDENCIES
   dotenv-rails
   good_job
   jsbundling-rails
-  nokogiri (>= 1.13.4)
+  nokogiri (>= 1.13.6)
   pg
   pry
   puma
