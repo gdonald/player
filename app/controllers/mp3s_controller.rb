@@ -12,7 +12,9 @@ class Mp3sController < ApplicationController
 
   def play
     @mp3 = Mp3.find_by(id: params[:id])
-    PlaylistMp3.create!(playlist: current_playlist, mp3: @mp3)
+
+    recent_playlist = Playlist.find_by(name: Playlist::RECENT)
+    PlaylistMp3.find_or_create_by(playlist: recent_playlist, mp3: @mp3)
   end
 
   def src
