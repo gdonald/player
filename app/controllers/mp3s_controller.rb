@@ -44,8 +44,8 @@ class Mp3sController < ApplicationController
       tag = file.id3v2_tag
 
       tag.title = @mp3.title
-      tag.album = @mp3.album
-      tag.artist = @mp3.artist
+      tag.album = @mp3.album.name
+      tag.artist = @mp3.artist.name
 
       file.save
     end
