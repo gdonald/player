@@ -27,31 +27,53 @@ class Mp3sController < ApplicationController
   end
 
   def update
-    @mp3 = Mp3.find_by(id: params[:id])
+    artist = find_artist
+    album = find_album(artist:)
+    mp3 = update_mp3(artist:, album:)
+    update_tag(mp3:)
+  end
 
-    artist = Artist.find_by(name: mp3_params[:artist])
-    artist ||= Artist.create!(name: mp3_params[:artist])
+  private
+
+  def update_mp3(artist:, album:)
+    return unless artist && album
+
+    mp3 = Mp3.find_by(id: params[:id])
+    return unless mp3
+
+    mp3.artist = artist
+    mp3.album = album
+    mp3.title = mp3_params[:title]
+    mp3.save!
+
+    mp3
+  end
+
+  def find_album(artist:)
+    return unless artist
 
     album = artist.albums.find_by(name: mp3_params[:album])
     album ||= artist.albums.create!(name: mp3_params[:album])
+    album
+  end
 
-    @mp3.artist = artist
-    @mp3.album = album
-    @mp3.title = mp3_params[:title]
-    @mp3.save!
+  def find_artist
+    artist = Artist.find_by(name: mp3_params[:artist])
+    artist ||= Artist.create!(name: mp3_params[:artist])
+    artist
+  end
 
-    TagLib::MPEG::File.open(@mp3.filepath) do |file|
+  def update_tag(mp3:)
+    TagLib::MPEG::File.open(mp3.filepath) do |file|
       tag = file.id3v2_tag
 
-      tag.title = @mp3.title
-      tag.album = @mp3.album.name
-      tag.artist = @mp3.artist.name
+      tag.title = mp3.title
+      tag.album = mp3.album.name
+      tag.artist = mp3.artist.name
 
       file.save
     end
   end
-
-  private
 
   def mp3_params
     params.require(:mp3).permit(:title, :album, :artist)

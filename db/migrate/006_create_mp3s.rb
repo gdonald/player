@@ -13,6 +13,7 @@ class CreateMp3s < ActiveRecord::Migration[7.0]
       t.integer :track
       t.integer :length
       t.text :comment
+      t.timestamps
     end
     add_index :mp3s, :title
     add_index :mp3s, %i[artist_id album_id title length], unique: true

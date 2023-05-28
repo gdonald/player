@@ -22,21 +22,21 @@
     <table class="table table-striped table-hover table-bordered table-sm">
       <thead>
         <tr>
-          <td>Album</td>
-          <td>Artist</td>
-          <td>Song</td>
-          <td>Length</td>
-          <td colspan="2">&nbsp;</td>
+          <th class="px-2">Album</th>
+          <th class="px-2">Artist</th>
+          <th class="px-2">Song</th>
+          <th class="px-2 tight">Length</th>
+          <th colspan="2">&nbsp;</th>
         </tr>
       </thead>
       <tbody>
         <% playlist.playlist_mp3s.each do |playlist_mp3| %>
-          <tr>
-            <td><%= playlist_mp3.mp3.album.name %></td>
-            <td><%= playlist_mp3.mp3.artist.name %></td>
-            <td><%= playlist_mp3.mp3.title %></td>
-            <td><%= playlist_mp3.mp3.duration %></td>
-            <td class="col-2">
+          <tr class="align-middle">
+            <td class="px-2"><%= playlist_mp3.mp3.album.name %></td>
+            <td class="px-2"><%= playlist_mp3.mp3.artist.name %></td>
+            <td class="px-2"><%= playlist_mp3.mp3.title %></td>
+            <td class="text-center"><%= playlist_mp3.mp3.duration %></td>
+            <td class="tight px-2">
               <% if playlist_mp3.first? %>
                 <%= link_to 'Move Up', 'javascript:;', method: :post, remote: true, class: "btn btn-secondary btn-sm" %>
               <% else %>
@@ -49,7 +49,7 @@
                 <%= link_to 'Move Down', move_down_playlist_mp3_path(playlist_mp3), method: :post, remote: true, class: "btn btn-primary btn-sm" %>
               <% end %>
             </td>
-            <td>
+            <td class="tight px-2">
               <%= link_to 'Delete', playlist_mp3_path(playlist_mp3), method: :delete, remote: true, class: "btn btn-primary btn-sm" %>
             </td>
           </tr>
