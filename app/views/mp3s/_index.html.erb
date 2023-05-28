@@ -3,7 +3,7 @@
   <div data-controller="mp3s" data-mp3s-url="<%= search_mp3s_path %>">
     <%= simple_form_for :search, html: { onsubmit: 'return false' } do |f| %>
       <div class="mb-3">
-        <%= f.input :query, label: 'Search', required: false, label: false, placeholder: 'Search term', input_html: { value: session[:q] || '' } %>
+        <%= f.input :query, label: 'Search', required: false, label: false, placeholder: 'Search term', input_html: { value: session[:mp3s_q] || '' } %>
       </div>
     <% end %>
     <div id="results"></div>

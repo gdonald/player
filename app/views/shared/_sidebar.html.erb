@@ -15,6 +15,16 @@
         <% end %>
       </li>
       <li class="nav-item">
+        <%= link_to artists_path, remote: true, class: 'nav-link px-sm-0 px-2' do %>
+          <i class="fs-5 bi-card-list"></i><span class="ms-1 d-none d-sm-inline">Artists</span>
+        <% end %>
+      </li>
+      <li class="nav-item">
+        <%= link_to albums_path, remote: true, class: 'nav-link px-sm-0 px-2' do %>
+          <i class="fs-5 bi-card-list"></i><span class="ms-1 d-none d-sm-inline">Albums</span>
+        <% end %>
+      </li>
+      <li class="nav-item">
         <%= link_to sources_path, remote: true, class: 'nav-link px-sm-0 px-2' do %>
           <i class="fs-5 bi-folder"></i><span class="ms-1 d-none d-sm-inline">Sources</span>
         <% end %>

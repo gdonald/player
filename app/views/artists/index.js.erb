@@ -1,0 +1,2 @@
+<% html = escape_javascript( render( partial: 'artists/index', locals: { artists: @artists } ) ) %>
+$("#main").html("<%= html %>");

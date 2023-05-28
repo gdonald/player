@@ -7,7 +7,7 @@ class Mp3sController < ApplicationController
 
   def search
     @mp3s = Mp3.search(params[:q]).ordered
-    session[:q] = params[:q]
+    session[:mp3s_q] = params[:q]
   end
 
   def play

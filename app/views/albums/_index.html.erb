@@ -1,0 +1,11 @@
+<div class="pt-2">
+  <h5>Albums</h5>
+  <div data-controller="albums" data-albums-url="<%= search_albums_path %>">
+    <%= simple_form_for :search, html: { onsubmit: 'return false' } do |f| %>
+      <div class="mb-3">
+        <%= f.input :query, label: 'Search', required: false, label: false, placeholder: 'Search term', input_html: { value: session[:albums_q] || '' } %>
+      </div>
+    <% end %>
+    <div id="results"></div>
+  </div>
+</div>

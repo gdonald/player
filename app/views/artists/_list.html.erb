@@ -1,0 +1,36 @@
+<%= simple_form_for :playlist_mp3s, url: add_playlist_mp3s_path, remote: true do |f| %>
+  <table class="table table-striped table-hover table-bordered table-sm">
+    <thead>
+      <tr>
+        <th class="text-center px-2"><input type="checkbox" id="all"></th>
+        <th class="px-2">Name</th>
+        <th class="text-center px-2">Updated</th>
+      </tr>
+    </thead>
+    <tbody class="artists">
+      <% artists.each do |artist| %>
+        <tr class="align-middle">
+          <td class="text-center px-3 tight"><input type="checkbox" name="artists[]" value="<%= artist.id %>"></td>
+          <td class="px-2"><%= artist.name %></td>
+          <td class="text-nowrap px-2 tight"><%= artist.updated_at %></td>
+        </tr>
+      <% end %>
+    </tbody>
+  </table>
+
+  <!-- <table class="table table-striped table-hover table-bordered table-sm">
+       <thead>
+       <tr>
+       <th colspan="2" class="px-2">Add To Playlist</th>
+       </tr>
+       </thead>
+       <tbody>
+       <tr>
+       <td class="col-2 px-2 py-2">
+       <%#= f.input :playlist_id, collection: Playlist.all, input_html: { class: 'form-select' }, label: false %>
+       </td>
+       <td class="px-2 align-middle"><button class="btn btn-primary btn-sm">Add</button></td>
+       </tr>
+       </tbody>
+       </table> -->
+<% end %>
