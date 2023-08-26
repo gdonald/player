@@ -5,19 +5,18 @@ git_source(:github) { |repo| "https://github.com/#{repo}.git" }
 
 ruby '3.1.2'
 
-gem 'rails'
+gem 'rails', '~> 7.0.7'
 
 gem 'cssbundling-rails'
 gem 'jsbundling-rails'
 gem 'pg'
-gem 'puma'
+gem 'puma', '~> 6.3.1'
 gem 'sprockets-rails'
-gem 'stimulus-rails'
+gem 'stimulus-rails', '~> 1.2.2'
 gem 'tzinfo-data', platforms: %i[mingw mswin x64_mingw jruby]
 
-gem 'activerecord-session_store'
 gem 'acts_as_list'
-gem 'good_job'
+gem 'good_job', '~> 3.17.0'
 gem 'nokogiri', '>= 1.13.6'
 gem 'simple_form'
 gem 'taglib-ruby'
@@ -35,9 +34,8 @@ end
 
 group :test do
   gem 'capybara'
-  gem 'rubocop'
+  gem 'rubocop', '~> 1.56.1'
   gem 'rubocop-rails'
-  gem 'rubocop-rspec'
-  gem 'selenium-webdriver'
-  gem 'webdrivers'
+  gem 'rubocop-rspec', '~> 2.23.2'
+  gem 'selenium-webdriver', '~> 4.11.0'
 end
