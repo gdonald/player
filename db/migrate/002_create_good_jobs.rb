@@ -1,7 +1,7 @@
 # frozen_string_literal: true
 
 class CreateGoodJobs < ActiveRecord::Migration[7.0]
-  def change
+  def change # rubocop:disable Metrics/AbcSize
     enable_extension 'pgcrypto'
 
     create_table :good_jobs, id: :uuid do |t|

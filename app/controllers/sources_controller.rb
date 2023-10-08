@@ -9,12 +9,12 @@ class SourcesController < ApplicationController
     @source = Source.new
   end
 
-  def create
-    @source = Source.create(source_params)
-  end
-
   def edit
     @source = Source.find_by(id: params[:id])
+  end
+
+  def create
+    @source = Source.create(source_params)
   end
 
   def update

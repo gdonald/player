@@ -3,7 +3,9 @@
 class Source < ApplicationRecord
   scope :ordered, -> { order(:path) }
 
-  has_many :mp3s, -> { order(:filepath) }, dependent: :destroy
+  has_many :mp3s, -> { order(:filepath) }, dependent: :destroy, inverse_of: :source
+
+  validates :path, presence: true, uniqueness: true
 
   def sync(truncate: false)
     if truncate
@@ -17,7 +19,7 @@ class Source < ApplicationRecord
     begin
       scan
     rescue StandardError => e
-      puts e.backtrace
+      Rails.logger.debug e.backtrace
       raise
     end
   end

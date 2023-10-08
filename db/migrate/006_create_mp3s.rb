@@ -1,7 +1,7 @@
 # frozen_string_literal: true
 
 class CreateMp3s < ActiveRecord::Migration[7.0]
-  def change
+  def change # rubocop:disable Metrics/AbcSize
     create_table :mp3s do |t|
       t.references :source, null: false
       t.references :artist, null: false

@@ -21,6 +21,8 @@ class PlaylistMp3sController < ApplicationController
     head :ok
   end
 
+  def edit; end
+
   def create
     playlist = current_playlist
     mp3 = Mp3.find_by(id: params[:mp3_id])
@@ -42,8 +44,6 @@ class PlaylistMp3sController < ApplicationController
     playlist_mp3.move_lower
     @playlist = playlist_mp3.playlist
   end
-
-  def edit; end
 
   def update; end
 

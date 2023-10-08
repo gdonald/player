@@ -7,5 +7,6 @@ class CreatePlaylists < ActiveRecord::Migration[7.0]
       t.integer :playlist_mp3s_count, null: false, default: 0
       t.timestamps
     end
+    add_index :playlists, :name, unique: true
   end
 end

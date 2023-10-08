@@ -1,6 +1,7 @@
 # frozen_string_literal: true
+
 class CreateGoodJobExecutions < ActiveRecord::Migration[7.0]
-  def change
+  def change # rubocop:disable Metrics/AbcSize
     reversible do |dir|
       dir.up do
         # Ensure this incremental update migration is idempotent
@@ -20,11 +21,11 @@ class CreateGoodJobExecutions < ActiveRecord::Migration[7.0]
       t.datetime :finished_at
       t.text :error
 
-      t.index [:active_job_id, :created_at], name: :index_good_job_executions_on_active_job_id_and_created_at
+      t.index %i[active_job_id created_at], name: :index_good_job_executions_on_active_job_id_and_created_at
     end
 
-    change_table :good_jobs do |t|
-      t.boolean :is_discrete
+    change_table :good_jobs do |t| # rubocop:disable Rails/BulkChangeTable
+      t.boolean :is_discrete, default: false, null: false
       t.integer :executions_count
       t.text :job_class
     end

@@ -11,12 +11,12 @@ class PlaylistsController < ApplicationController
     @playlist = Playlist.new
   end
 
-  def create
-    @playlist = Playlist.create(playlist_params)
-  end
-
   def edit
     @playlist = Playlist.find_by(id: params[:id])
+  end
+
+  def create
+    @playlist = Playlist.create(playlist_params)
   end
 
   def update

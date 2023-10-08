@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.0].define(version: 12) do
+ActiveRecord::Schema[7.1].define(version: 12) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pgcrypto"
   enable_extension "plpgsql"
@@ -92,7 +92,7 @@ ActiveRecord::Schema[7.0].define(version: 12) do
     t.datetime "cron_at", precision: nil
     t.uuid "batch_id"
     t.uuid "batch_callback_id"
-    t.boolean "is_discrete"
+    t.boolean "is_discrete", default: false, null: false
     t.integer "executions_count"
     t.text "job_class"
     t.index ["active_job_id", "created_at"], name: "index_good_jobs_on_active_job_id_and_created_at"
@@ -148,6 +148,7 @@ ActiveRecord::Schema[7.0].define(version: 12) do
     t.integer "playlist_mp3s_count", default: 0, null: false
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.index ["name"], name: "index_playlists_on_name", unique: true
   end
 
   create_table "sources", force: :cascade do |t|

@@ -3,7 +3,7 @@
 class Playlist < ApplicationRecord
   RECENT = 'Recently Played'
 
-  has_many :playlist_mp3s, -> { order(:position) }, dependent: :destroy
+  has_many :playlist_mp3s, -> { order(:position) }, dependent: :destroy, inverse_of: :playlist
   has_many :mp3s, through: :playlist_mp3s
   has_many :albums, through: :mp3s
   has_many :artists, through: :mp3s
