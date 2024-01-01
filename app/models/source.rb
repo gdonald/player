@@ -1,38 +1,51 @@
 # frozen_string_literal: true
 
 class Source < ApplicationRecord
+  include AASM
+
+  aasm column: 'state' do
+    state :unscanned, initial: true
+    state :scanning
+    state :scanned
+    state :errored
+
+    event :start_scan do
+      transitions from: %i[unscanned scanned errored], to: :scanning
+    end
+
+    event :done do
+      transitions from: :scanning, to: :scanned
+    end
+
+    event :error do
+      transitions from: :scanning, to: :errored
+    end
+  end
+
   scope :ordered, -> { order(:path) }
 
   has_many :mp3s, -> { order(:filepath) }, dependent: :destroy, inverse_of: :source
 
   validates :path, presence: true, uniqueness: true
 
-  def sync(truncate: false)
+  def scan(truncate: false)
     if truncate
       Mp3.destroy_all
       Album.destroy_all
       Artist.destroy_all
-    else
-      check_known
+      Playlist.destroy_all
     end
 
-    begin
-      scan
-    rescue StandardError => e
-      Rails.logger.debug e.backtrace
-      raise
-    end
+    check_known
+    do_scan
   end
 
   private
 
-  def scan
+  def do_scan
     Dir.glob("#{path}/**/*.mp3", File::FNM_CASEFOLD).each do |filepath|
       TagLib::FileRef.open(filepath) do |ref|
-        if ref.nil?
-          logger.warn("Cannot read file #{filepath}")
-          next
-        end
+        raise StandardError, "Cannot read file #{filepath}" if ref.nil?
 
         mp3 = Mp3.find_by(filepath:)
         if mp3
@@ -48,7 +61,7 @@ class Source < ApplicationRecord
     Mp3.find_each do |mp3|
       unless File.readable?(mp3.filepath)
         logger.warn("Cannot find known file #{mp3.filepath}")
-        mp3.destroy
+        mp3.destroy!
       end
     end
   end

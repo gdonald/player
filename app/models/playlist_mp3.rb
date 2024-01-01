@@ -5,4 +5,6 @@ class PlaylistMp3 < ApplicationRecord
   acts_as_list scope: :playlist
 
   belongs_to :mp3
+
+  validates :mp3_id, uniqueness: { scope: :playlist_id }
 end

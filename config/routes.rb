@@ -1,55 +1,28 @@
 # frozen_string_literal: true
 
-Rails.application.routes.draw do # rubocop:disable Metrics/BlockLength
-  resources :playlists do
-    member do
-      get :play
-      get :next
-      get :prev
+Rails.application.routes.draw do
+  namespace :api do
+    get :counts, to: 'counts#index'
+    resources :queued_mp3s, only: %i[index create destroy]
+    resources :mp3s, only: %i[index show update] do
+      get :search, on: :collection
+      get :play, on: :member
     end
-  end
-
-  resources :playlist_mp3s do
-    member do
-      post :move_up
-      post :move_down
+    resources :playlists, only: %i[index show update create destroy] do
+      post :enqueue, on: :member
+      resources :playlist_mp3s, only: %i[index destroy] do
+        member do
+          post :move_higher
+          post :move_lower
+        end
+      end
     end
-
-    collection do
-      post :add
-    end
-  end
-
-  resources :mp3s, only: %i[index edit update] do
-    collection do
-      get :search
-    end
-
-    member do
-      get :play
-      get :src
-    end
-  end
-
-  resources :artists, only: :index do
-    collection do
-      get :search
-    end
-  end
-
-  resources :albums, only: :index do
-    collection do
-      get :search
-    end
-  end
-
-  resources :sources do
-    member do
-      get :sync
+    resources :sources, only: %i[index show update] do
+      get :scan, on: :member
     end
   end
 
   mount GoodJob::Engine => 'good_job'
 
-  root 'mp3s#index'
+  root 'home#index'
 end

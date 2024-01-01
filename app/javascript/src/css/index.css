@@ -1,0 +1,131 @@
+body {
+  background: #eee;
+}
+
+.main-wrapper {
+  padding: 0 !important;
+  margin: 0 !important;
+}
+
+.main-content {
+  height: calc(100vh - 100px);
+  overflow: auto;
+}
+
+.audio-content {
+  height: 100px;
+}
+
+.menu-items {
+  height: 141px;
+  padding: 0 !important;
+  margin: 0 !important;
+}
+
+.list-group-item {
+  border-right: none;
+}
+
+.queue-wrapper {
+  padding: 0 !important;
+  margin: 0 !important;
+}
+
+.queue-content {
+  height: calc(100vh - 142px);
+  overflow: auto;
+}
+
+.queue-title {
+  margin: 0;
+  padding: 4px 0 4px 6px !important;
+  font-size: 12px;
+}
+
+td.queue-delete-icon {
+  margin: 0;
+  padding: 0 0 0 5px !important;
+}
+
+td.queue-current-icon {
+  margin: 0;
+  padding: 0 6px 0 0 !important;
+}
+
+.queue-icon-text {
+  font-size: 13px;
+}
+
+.queue-play {
+  margin-bottom: -24px;
+}
+
+.tight {
+  width: 1%;
+  white-space: nowrap;
+}
+
+.error {
+  color: red;
+  font-size: 13px;
+  font-style: italic;
+}
+
+.wait {
+  margin: 6px 6px -46px 0;
+  text-align: right;
+  height: 40px;
+  
+}
+
+.waiting {
+  display: inline-block;
+  position: relative;
+  width: 36px;
+  height: 36px;
+  vertical-align: middle;
+  z-index: 1000;
+}
+
+.waiting div {
+  position: absolute;
+  border: 1px solid #000;
+  opacity: 0.8;
+  border-radius: 50%;
+  animation: waiting 1s cubic-bezier(0, 0, 0, 1) infinite;
+}
+
+.waiting div:nth-child(2) {
+  animation-delay: -0.5s;
+}
+
+@keyframes waiting {
+  0% {
+    top: 18px;
+    left: 18px;
+    width: 0;
+    height: 0;
+    opacity: 0;
+  }
+  29.9% {
+    top: 18px;
+    left: 18px;
+    width: 0;
+    height: 0;
+    opacity: 0;
+  }
+  30% {
+    top: 18px;
+    left: 18px;
+    width: 0;
+    height: 0;
+    opacity: 1;
+  }
+  100% {
+    top: 0px;
+    left: 0px;
+    width: 36px;
+    height: 36px;
+    opacity: 0;
+  }
+}

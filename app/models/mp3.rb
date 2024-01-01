@@ -7,9 +7,12 @@ class Mp3 < ApplicationRecord
   belongs_to :album, counter_cache: true
   belongs_to :artist, counter_cache: true
 
-  validates :filepath, presence: true
+  has_many :playlist_mp3s, dependent: :destroy
 
-  scope :ordered, -> { includes(:artist, :album).order('artists.name, albums.name, mp3s.title') }
+  validates :filepath, presence: true
+  validates :title, presence: true
+
+  scope :ordered, -> { includes(:artist, :album).order('artists.name, albums.name, mp3s.track, mp3s.title') }
 
   CLEAN = /[^-_0-9a-zA-Z .,()"]/
 
@@ -52,41 +55,69 @@ class Mp3 < ApplicationRecord
     Time.at(length).utc.strftime('%M:%S')
   end
 
-  def self.create_mp3(source, filepath, ref)
+  def self.create_mp3(source, filepath, ref) # rubocop:disable Metrics/AbcSize
     tag = ref.tag
     properties = ref.audio_properties
-    artist = Artist.find_unknown(name: tag.artist)
-    album = Album.find_unknown(artist:, name: tag.album)
     title = tag.title
+    artist_name = tag.artist
+
+    if title.blank? || artist_name.blank?
+      parts = filepath.split('/')
+      filename = parts.last.gsub('.mp3', '')
+      mp3_parts = filename.split('-').map(&:strip)
+
+      if mp3_parts.size == 2
+        artist_name = mp3_parts.first
+        title = mp3_parts.last
+      end
+    end
+
+    artist = Artist.find_unknown(name: artist_name)
+    album = Album.find_unknown(artist:, name: tag.album)
     length = properties.length_in_seconds
 
-    begin
-      Mp3.create!(filepath:, source:, artist:, album:, title:, length:,
-                  genre: tag.genre,
-                  year: tag.year,
-                  track: tag.track,
-                  comment: tag.comment)
-    rescue ActiveRecord::RecordNotUnique
-      logger.warn "Duplicate: artist: #{artist} album: #{album} title: #{title} length: #{length}"
-    end
+    Mp3.create!(filepath:, source:, artist:, album:, title:, length:,
+                genre: tag.genre,
+                year: tag.year,
+                track: tag.track,
+                comment: tag.comment)
   end
 
-  def do_update(ref)
+  def do_update(ref) # rubocop:disable Metrics/AbcSize
     tag = ref.tag
+    puts "tag.track: #{tag.track}"
     properties = ref.audio_properties
-    artist = Artist.find_unknown(name: tag.artist)
-    album = Album.find_unknown(artist:, name: tag.album)
+
     title = tag.title
+    artist_name = tag.artist
+
+    if title.blank? || artist_name.blank?
+      parts = filepath.split('/')
+      filename = parts.last.gsub('.mp3', '')
+      mp3_parts = filename.split('-').map(&:strip)
+
+      if mp3_parts.size == 2
+        artist_name = mp3_parts.first
+        title = mp3_parts.last
+      end
+    end
+
+    artist = Artist.find_unknown(name: artist_name)
+    album = Album.find_unknown(artist:, name: tag.album)
     length = properties.length_in_seconds
 
-    begin
-      update!(artist:, album:, title:, length:,
-              genre: tag.genre,
-              year: tag.year,
-              track: tag.track,
-              comment: tag.comment)
-    rescue ActiveRecord::RecordNotUnique
-      logger.warn "Duplicate: artist: #{artist} album: #{album} title: #{title} length: #{length}"
-    end
+    update!(artist:, album:, title:, length:,
+            genre: tag.genre,
+            year: tag.year,
+            track: tag.track,
+            comment: tag.comment)
+  end
+
+  def artist_name
+    artist&.name
+  end
+
+  def album_name
+    album&.name
   end
 end

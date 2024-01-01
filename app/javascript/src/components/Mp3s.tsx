@@ -1,0 +1,328 @@
+import React, { useEffect, useState } from 'react'
+import PlaylistsForm from './PlaylistsForm'
+import { Mp3Type, PlaylistType } from '../lib/types'
+
+export default function Mp3s({
+  showWait,
+  showMessage,
+  setShow,
+  createQueuedMp3,
+  q,
+  setQ,
+}: {
+  showWait: Function
+  playSrc: Function
+  showMessage: Function
+  setShow: Function
+  createQueuedMp3: Function
+  q: string | null
+  setQ: Function
+}) {
+  const [mp3s, setMp3s] = useState<Mp3Type[]>([])
+  const [mp3Ids, setMp3Ids] = useState<string[]>([])
+  const [playlists, setPlaylists] = useState<PlaylistType[]>([])
+
+  const getMp3s = async () => {
+    showWait(true)
+    const req = await fetch('/api/mp3s')
+    const data = await req.json()
+    setMp3s(data.mp3s)
+    showWait(false)
+  }
+
+  const searchMp3s = async (url: string) => {
+    showWait(true)
+    const req = await fetch(url)
+    const data = await req.json()
+    setMp3s(data.mp3s)
+    showWait(false)
+  }
+
+  const getPlaylistsAndMp3s = async () => {
+    showWait(true)
+
+    const playlistsReq = await fetch('/api/playlists')
+    const playlistsData = await playlistsReq.json()
+    setPlaylists(playlistsData.playlists)
+
+    let mp3sReq
+    if (q) {
+      mp3sReq = await fetch(`/api/mp3s/search?q=${q}`)
+    } else {
+      mp3sReq = await fetch('/api/mp3s')
+    }
+    const mp3sData = await mp3sReq.json()
+    setMp3s(mp3sData.mp3s)
+
+    showWait(false)
+  }
+
+  useEffect(() => {
+    getPlaylistsAndMp3s()
+  }, [])
+
+  function search(e: React.ChangeEvent<HTMLInputElement>) {
+    e.preventDefault()
+    const q = e.target.value
+    setQ(q)
+    searchMp3s(`/api/mp3s/search?q=${q}`)
+  }
+
+  function searchArtist(e: React.MouseEvent<HTMLAnchorElement, MouseEvent>) {
+    e.preventDefault()
+    const q = `artist:"${e.currentTarget.innerText}"`
+    setQ(q)
+    searchMp3s(`/api/mp3s/search?q=${q}`)
+  }
+
+  function searchAlbum(e: React.MouseEvent<HTMLAnchorElement, MouseEvent>) {
+    e.preventDefault()
+    const q = `album:"${e.currentTarget.innerText}"`
+    setQ(q)
+    searchMp3s(`/api/mp3s/search?q=${q}`)
+  }
+
+  function clearSearch(e: React.MouseEvent<HTMLButtonElement, MouseEvent>) {
+    e.preventDefault()
+    setQ(null)
+    getMp3s()
+  }
+
+  function playMp3(e: React.MouseEvent<HTMLAnchorElement, MouseEvent>) {
+    e.preventDefault()
+    const id = e.currentTarget.id
+    createQueuedMp3(id)
+  }
+
+  function selectMp3(e: React.MouseEvent<HTMLInputElement, MouseEvent>) {
+    const tbody = e.currentTarget.closest('tbody')
+    if (!tbody) return
+
+    const checkboxes = tbody.querySelectorAll('input[type="checkbox"]')
+    const checkedCheckboxes = Array.from(checkboxes).filter(
+      (checkbox) => (checkbox as HTMLInputElement).checked
+    )
+
+    const ids = checkedCheckboxes.map((checkbox) => checkbox.id)
+    setMp3Ids(ids)
+
+    const table = e.currentTarget.closest('table')
+    if (!table) return
+
+    let selectAllCheckbox: HTMLInputElement | null = table.querySelector(
+      'thead input[type="checkbox"]'
+    )
+
+    if (!selectAllCheckbox) return
+
+    selectAllCheckbox.checked = checkedCheckboxes.length === checkboxes.length
+  }
+
+  function selectAllNoneMp3s(
+    e: React.MouseEvent<HTMLInputElement, MouseEvent>
+  ) {
+    const checked = e.currentTarget.checked
+    const table = e.currentTarget.closest('table')
+    if (!table) return
+
+    const tbody = table.querySelector('tbody')
+    if (!tbody) return
+
+    const checkboxes = tbody.querySelectorAll('input[type="checkbox"]')
+    checkboxes.forEach((checkbox) => {
+      ;(checkbox as HTMLInputElement).checked = checked
+    })
+
+    if (checked) {
+      const ids = Array.from(checkboxes).map((checkbox) => checkbox.id)
+      setMp3Ids(ids)
+    } else {
+      setMp3Ids([])
+    }
+  }
+
+  function editMp3(e: React.MouseEvent<HTMLButtonElement, MouseEvent>) {
+    e.preventDefault()
+    const id = e.currentTarget.id
+    setShow({ entity: 'editmp3', id: id })
+  }
+
+  const doUpdatePlaylist = async (playlistId: string, mp3Id: string) => {
+    showWait(true)
+    const req = await fetch(`/api/playlists/${playlistId}`, {
+      method: 'PUT',
+      mode: 'cors',
+      body: JSON.stringify({
+        playlist: {
+          playlist_mp3s_attributes: [{ mp3_id: mp3Id }],
+        },
+      }),
+      headers: {
+        'Content-Type': 'application/json',
+      },
+    }).finally(() => {
+      showWait(false)
+    })
+
+    const data = await req.json()
+
+    if (data.message) {
+      showMessage(data.message)
+    }
+  }
+
+  function addToPlaylist(e: React.MouseEvent<HTMLAnchorElement, MouseEvent>) {
+    e.preventDefault()
+    const playlistId = e.currentTarget.dataset.playlistId
+    const mp3Id = e.currentTarget.dataset.mp3Id
+    if (!playlistId || !mp3Id) return
+
+    doUpdatePlaylist(playlistId, mp3Id)
+  }
+
+  return (
+    <div className='container-fluid'>
+      <nav aria-label='breadcrumb'>
+        <ol className='breadcrumb'>
+          <li className='breadcrumb-item' aria-current='page'>
+            <b>
+              <i className='bi-music-note-beamed'></i> MP3s
+            </b>
+          </li>
+        </ol>
+      </nav>
+      <div className='search'>
+        <form onSubmit={(e) => e.preventDefault()} className='px-0'>
+          <div className='input-group mb-0'>
+            <input
+              type='text'
+              className='form-control'
+              placeholder='Search'
+              aria-label='Search'
+              aria-describedby='button-addon-search'
+              value={q || ''}
+              onChange={search}
+            />
+            <button
+              className='btn btn-primary'
+              type='button'
+              id='button-addon-search'
+              onClick={clearSearch}
+            >
+              Clear Search
+            </button>
+          </div>
+        </form>
+      </div>
+      {mp3Ids.length > 0 && (
+        <PlaylistsForm
+          showWait={showWait}
+          mp3Ids={mp3Ids}
+          showMessage={showMessage}
+          setShow={setShow}
+          playlists={playlists}
+          q={q}
+        ></PlaylistsForm>
+      )}
+      <div className='list mt-2'>
+        {mp3s.length === 0 && (
+          <p className='text-center pt-5'>No mp3s found.</p>
+        )}
+
+        {mp3s.length > 0 && (
+          <table className='table table-striped table-hover'>
+            <thead>
+              <tr>
+                <th className='tight'>
+                  {mp3s.length > 0 && (
+                    <input type='checkbox' onClick={selectAllNoneMp3s} />
+                  )}
+                </th>
+                <th>Title</th>
+                <th>Album</th>
+                <th className='text-center'>Track</th>
+                <th>Artist</th>
+                <th></th>
+              </tr>
+            </thead>
+            <tbody>
+              {mp3s.map((mp3) => (
+                <tr className='align-middle' key={`mp3-${mp3['id']}`}>
+                  <td>
+                    <input
+                      type='checkbox'
+                      onClick={selectMp3}
+                      id={mp3['id'].toString()}
+                    />
+                  </td>
+                  <td>
+                    <a href='#' onClick={playMp3} id={mp3['id'].toString()}>
+                      {mp3['title']}
+                    </a>
+                  </td>
+                  <td>
+                    <a href='#' onClick={searchAlbum}>
+                      {mp3['album_name']}
+                    </a>
+                  </td>
+                  <td className='text-center'>{mp3['track']}</td>
+                  <td>
+                    <a href='#' onClick={searchArtist}>
+                      {mp3['artist_name']}
+                    </a>
+                  </td>
+                  <td className='tight'>
+                    <div
+                      className='btn-group'
+                      role='group'
+                      aria-label='Mp3 actions'
+                    >
+                      {playlists.length > 0 && (
+                        <div className='btn-group' role='group'>
+                          <button
+                            type='button'
+                            className='btn btn-sm btn-primary dropdown-toggle'
+                            data-bs-toggle='dropdown'
+                            aria-expanded='false'
+                          >
+                            Add to Playlist
+                          </button>
+                          <ul
+                            className='dropdown-menu'
+                            key={`mp3-pl-options-${mp3['id']}`}
+                          >
+                            {playlists.map((playlist) => (
+                              <li key={`pl-option-${playlist['id']}`}>
+                                <a
+                                  className='dropdown-item'
+                                  href='#'
+                                  data-playlist-id={playlist['id']}
+                                  data-mp3-id={mp3['id']}
+                                  onClick={addToPlaylist}
+                                >
+                                  {playlist['name']}
+                                </a>
+                              </li>
+                            ))}
+                          </ul>
+                        </div>
+                      )}
+                      <button
+                        type='button'
+                        className='btn btn-sm btn-primary'
+                        id={mp3['id'].toString()}
+                        onClick={editMp3}
+                      >
+                        Edit
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        )}
+      </div>
+    </div>
+  )
+}

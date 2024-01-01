@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.1].define(version: 12) do
+ActiveRecord::Schema[7.1].define(version: 14) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pgcrypto"
   enable_extension "plpgsql"
@@ -151,12 +151,22 @@ ActiveRecord::Schema[7.1].define(version: 12) do
     t.index ["name"], name: "index_playlists_on_name", unique: true
   end
 
+  create_table "queued_mp3s", force: :cascade do |t|
+    t.integer "mp3_id"
+    t.integer "position", default: 0, null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["position"], name: "index_queued_mp3s_on_position", unique: true
+  end
+
   create_table "sources", force: :cascade do |t|
     t.string "path", null: false
     t.integer "mp3s_count", default: 0, null: false
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.string "state", default: "unscanned", null: false
     t.index ["path"], name: "index_sources_on_path", unique: true
+    t.index ["state"], name: "index_sources_on_state"
   end
 
 end

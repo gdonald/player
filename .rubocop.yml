@@ -13,3 +13,5 @@ Metrics/MethodLength:
   Max: 32
 Style/Documentation:
   Enabled: false
+Rails/I18nLocaleTexts:
+  Enabled: false
