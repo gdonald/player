@@ -10,7 +10,7 @@ gem 'rails', '~> 7.1.0'
 gem 'cssbundling-rails'
 gem 'jsbundling-rails'
 gem 'pg'
-gem 'puma', '~> 6.4.0'
+gem 'puma', '~> 6.4.2'
 gem 'sprockets-rails'
 gem 'stimulus-rails', '~> 1.3.0'
 
