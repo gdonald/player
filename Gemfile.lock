@@ -118,7 +118,7 @@ GEM
       raabro (~> 1.4)
     globalid (1.2.1)
       activesupport (>= 6.1)
-    good_job (3.21.5)
+    good_job (3.22.0)
       activejob (>= 6.0.0)
       activerecord (>= 6.0.0)
       concurrent-ruby (>= 1.0.2)
@@ -314,12 +314,12 @@ DEPENDENCIES
   cssbundling-rails
   debug
   dotenv-rails
-  good_job (~> 3.21.0)
+  good_job (~> 3.22.0)
   jsbundling-rails
   nokogiri (>= 1.13.6)
   pg
   pry
-  puma (~> 6.4.0)
+  puma (~> 6.4.2)
   rails (~> 7.1.0)
   rspec-rails
   rubocop
