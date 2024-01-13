@@ -14,7 +14,7 @@ yarn build
 
 ## Bundler Note:
 
-On macOS I use the `TAGLIB_DIR` environment variable to get bundler to install the taglib-ruby gem:
+On macOS I use the `TAGLIB_DIR` environment variable to install the taglib-ruby gem:
 
 ```bash
 brew install taglib
@@ -28,7 +28,7 @@ TAGLIB_DIR=/opt/homebrew/Cellar/taglib/1.13.1 bundle install
 bundle exec rails server
 ```
 
-Add a "source" directory to the root of your music collections.  Then "scan" it from the web interface.  Re-scan as needed.
+Add a "source" directory to the root of your music collection.  Then "scan" it from the web interface.  Re-scan as needed.
 
 ## License
 
