@@ -42,6 +42,12 @@ export default function Mp3s({
     showWait(false)
   }
 
+  const getPlaylists = async () => {
+    const playlistsReq = await fetch('/api/playlists')
+    const playlistsData = await playlistsReq.json()
+    setPlaylists(playlistsData.playlists)
+  }
+
   const getPlaylistsAndMp3s = async () => {
     showWait(true)
 
@@ -205,6 +211,7 @@ export default function Mp3s({
 
   useEffect(() => {
     if (q) {
+      getPlaylists()
       searchMp3s(`/api/mp3s/search?q=${q}`)
     } else {
       getPlaylistsAndMp3s()
@@ -213,6 +220,7 @@ export default function Mp3s({
 
   useEffect(() => {
     if (q) {
+      getPlaylists()
       searchMp3s(`/api/mp3s/search?q=${q}`)
     } else {
       getMp3s()
