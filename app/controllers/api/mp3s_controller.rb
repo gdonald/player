@@ -3,11 +3,11 @@
 module Api
   class Mp3sController < Api::ApplicationController
     def index
-      @mp3s = Mp3.ordered(params[:sort])
+      @mp3s = Mp3.ordered(params)
     end
 
     def search
-      @mp3s = Mp3.search(params[:q]).ordered(params[:sort])
+      @mp3s = Mp3.search(params)
       render :index
     end
 

@@ -15,7 +15,9 @@ class Mp3 < ApplicationRecord
 
   CLEAN = /[^-_0-9a-zA-Z .,()"]/
 
-  scope :search, lambda { |query|
+  scope :search, lambda { |params|
+    query = params[:q]
+
     return all if query.blank?
 
     artist = query.scan(/artist:"(.+?)"/)
@@ -32,7 +34,7 @@ class Mp3 < ApplicationRecord
     parts += phrases unless phrases.empty?
     parts = parts.select(&:present?)
 
-    result = includes(:artist, :album)
+    result = Mp3.includes(:artist, :album).references(:artists, :album)
 
     ors = parts.map { |p| "artists.name ILIKE '%#{p}%' OR albums.name ILIKE '%#{p}%' OR mp3s.title ILIKE '%#{p}%'" }
     result = result.where(ors.join(' OR ')) if ors.any?
@@ -47,10 +49,10 @@ class Mp3 < ApplicationRecord
       result = result.where("albums.name ILIKE '#{album}'")
     end
 
-    result
+    result.order(order_by(params[:sort]))
   }
 
-  scope :ordered, ->(param) { includes(:artist, :album).order(order_by(param)) }
+  scope :ordered, ->(params) { includes(:artist, :album).order(order_by(params[:sort])) }
 
   def self.order_by(param) # rubocop:disable Metrics/CyclomaticComplexity
     parts = param&.split('_')

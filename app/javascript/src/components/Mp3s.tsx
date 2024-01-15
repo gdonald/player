@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react'
+import { DebounceInput } from 'react-debounce-input'
 import PlaylistsForm from './PlaylistsForm'
 import { Mp3Type, PlaylistType } from '../lib/types'
 
@@ -35,7 +36,7 @@ export default function Mp3s({
   const searchMp3s = async (url: string) => {
     showWait(true)
     const sortQuery = sortBy ? `sort=${sortBy}` : ''
-    const req = await fetch(`${url}?${sortQuery}`)
+    const req = await fetch(`${url}&${sortQuery}`)
     const data = await req.json()
     setMp3s(data.mp3s)
     showWait(false)
@@ -62,10 +63,6 @@ export default function Mp3s({
 
     showWait(false)
   }
-
-  useEffect(() => {
-    getPlaylistsAndMp3s()
-  }, [])
 
   function search(e: React.ChangeEvent<HTMLInputElement>) {
     e.preventDefault()
@@ -207,7 +204,19 @@ export default function Mp3s({
   }
 
   useEffect(() => {
-    getMp3s()
+    if (q) {
+      searchMp3s(`/api/mp3s/search?q=${q}`)
+    } else {
+      getPlaylistsAndMp3s()
+    }
+  }, [])
+
+  useEffect(() => {
+    if (q) {
+      searchMp3s(`/api/mp3s/search?q=${q}`)
+    } else {
+      getMp3s()
+    }
   }, [sortBy])
 
   return (
@@ -224,14 +233,12 @@ export default function Mp3s({
       <div className='search'>
         <form onSubmit={(e) => e.preventDefault()} className='px-0'>
           <div className='input-group mb-0'>
-            <input
-              type='text'
+            <DebounceInput
               className='form-control'
-              placeholder='Search'
-              aria-label='Search'
-              aria-describedby='button-addon-search'
-              value={q || ''}
+              debounceTimeout={500}
               onChange={search}
+              value={q || ''}
+              placeholder='Search'
             />
             <button
               className='btn btn-primary'
