@@ -39,6 +39,7 @@ export default function Mp3({
           title: mp3.title,
           artist: mp3.artist_name,
           album: mp3.album_name,
+          track: mp3.track,
         },
       }),
       headers: {
@@ -49,7 +50,6 @@ export default function Mp3({
     })
 
     const data = await req.json()
-    console.log('save', data)
 
     if (data.errors) {
       setErrors(data.errors)
@@ -154,7 +154,27 @@ export default function Mp3({
           {errors && <div className='error'>{errors['album_name']}</div>}
         </div>
 
-        <div className='btn-group' role='group' aria-label='Source actions'>
+        <div className='mb-3'>
+          <label htmlFor='track' className='form-label'>
+            Track
+          </label>
+          <input
+            id='track'
+            type='text'
+            className='form-control'
+            name='mp3[track]'
+            defaultValue={mp3['track']}
+            onChange={(e) => {
+              setMp3({ ...mp3, track: parseInt(e.target.value) })
+            }}
+            onBlur={(e) => {
+              setMp3({ ...mp3, track: parseInt(e.target.value) })
+            }}
+          />
+          {errors && <div className='error'>{errors['track']}</div>}
+        </div>
+
+        <div className='btn-group' role='group' aria-label='Save MP3'>
           <button type='submit' className='btn btn-primary' onClick={saveMp3}>
             Save
           </button>

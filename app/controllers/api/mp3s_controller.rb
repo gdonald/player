@@ -60,6 +60,7 @@ module Api
       mp3.artist = artist
       mp3.album = album
       mp3.title = mp3_params[:title]
+      mp3.track = mp3_params[:track]
       mp3.save
 
       mp3
@@ -78,7 +79,7 @@ module Api
     end
 
     def mp3_params
-      params.require(:mp3).permit(:title, :album, :artist)
+      params.require(:mp3).permit(:title, :album, :artist, :track)
     end
   end
 end

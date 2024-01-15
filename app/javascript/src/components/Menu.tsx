@@ -58,8 +58,8 @@ export default function Menu({
 
   return (
     <ul className='list-group rounded-0'>
-      <li className={`${klasses(/mp3s/)}`} onClick={showMp3s}>
-        <i className={`${icon_klasses('music-note-beamed', /mp3s/)}`}></i>{' '}
+      <li className={`${klasses(/mp3/)}`} onClick={showMp3s}>
+        <i className={`${icon_klasses('music-note-beamed', /mp3/)}`}></i>{' '}
         &nbsp;MP3s
         <span className='badge bg-dark text-light float-end mt-1'>
           {mp3sCount}

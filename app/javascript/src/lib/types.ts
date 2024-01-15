@@ -11,12 +11,14 @@ export interface EditMp3Type {
   title: string
   album_name: string
   artist_name: string
+  track: number
 }
 
 export interface EditMp3ErrorsType {
   title: string
   album_name: string
   artist_name: string
+  track: string
 }
 
 export interface NewPlaylistErrorType {

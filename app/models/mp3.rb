@@ -11,6 +11,7 @@ class Mp3 < ApplicationRecord
 
   validates :filepath, presence: true
   validates :title, presence: true
+  validates :track, numericality: { only_integer: true, greater_than: 0, allow_nil: true }
 
   scope :ordered, -> { includes(:artist, :album).order('artists.name, albums.name, mp3s.track, mp3s.title') }
 
@@ -85,7 +86,6 @@ class Mp3 < ApplicationRecord
 
   def do_update(ref) # rubocop:disable Metrics/AbcSize
     tag = ref.tag
-    puts "tag.track: #{tag.track}"
     properties = ref.audio_properties
 
     title = tag.title
