@@ -73,9 +73,8 @@ td.queue-current-icon {
 
 .wait {
   margin: 6px 6px -46px 0;
-  text-align: right;
+  text-align: center;
   height: 40px;
-  
 }
 
 .waiting {

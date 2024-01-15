@@ -21,10 +21,12 @@ export default function Mp3s({
   const [mp3s, setMp3s] = useState<Mp3Type[]>([])
   const [mp3Ids, setMp3Ids] = useState<string[]>([])
   const [playlists, setPlaylists] = useState<PlaylistType[]>([])
+  const [sortBy, setSortBy] = useState<string | null>(null)
 
   const getMp3s = async () => {
     showWait(true)
-    const req = await fetch('/api/mp3s')
+    const sortQuery = sortBy ? `sort=${sortBy}` : ''
+    const req = await fetch(`/api/mp3s?${sortQuery}`)
     const data = await req.json()
     setMp3s(data.mp3s)
     showWait(false)
@@ -32,7 +34,8 @@ export default function Mp3s({
 
   const searchMp3s = async (url: string) => {
     showWait(true)
-    const req = await fetch(url)
+    const sortQuery = sortBy ? `sort=${sortBy}` : ''
+    const req = await fetch(`${url}?${sortQuery}`)
     const data = await req.json()
     setMp3s(data.mp3s)
     showWait(false)
@@ -45,12 +48,15 @@ export default function Mp3s({
     const playlistsData = await playlistsReq.json()
     setPlaylists(playlistsData.playlists)
 
+    const sortQuery = sortBy ? `sort=${sortBy}` : ''
+
     let mp3sReq
     if (q) {
-      mp3sReq = await fetch(`/api/mp3s/search?q=${q}`)
+      mp3sReq = await fetch(`/api/mp3s/search?q=${q}&${sortQuery}`)
     } else {
-      mp3sReq = await fetch('/api/mp3s')
+      mp3sReq = await fetch(`/api/mp3s?&${sortQuery}`)
     }
+
     const mp3sData = await mp3sReq.json()
     setMp3s(mp3sData.mp3s)
 
@@ -144,7 +150,7 @@ export default function Mp3s({
   function editMp3(e: React.MouseEvent<HTMLButtonElement, MouseEvent>) {
     e.preventDefault()
     const id = e.currentTarget.id
-    setShow({ entity: 'editmp3', id: id })
+    setShow({ entity: 'mp3', id: id })
   }
 
   const doUpdatePlaylist = async (playlistId: string, mp3Id: string) => {
@@ -179,6 +185,30 @@ export default function Mp3s({
 
     doUpdatePlaylist(playlistId, mp3Id)
   }
+
+  function sortByAlbum(e: React.MouseEvent<HTMLAnchorElement, MouseEvent>) {
+    e.preventDefault()
+    sortBy === 'album_asc' ? setSortBy('album_desc') : setSortBy('album_asc')
+  }
+
+  function sortByArtist(e: React.MouseEvent<HTMLAnchorElement, MouseEvent>) {
+    e.preventDefault()
+    sortBy === 'artist_asc' ? setSortBy('artist_desc') : setSortBy('artist_asc')
+  }
+
+  function sortByTrack(e: React.MouseEvent<HTMLAnchorElement, MouseEvent>) {
+    e.preventDefault()
+    sortBy === 'track_asc' ? setSortBy('track_desc') : setSortBy('track_asc')
+  }
+
+  function sortByTitle(e: React.MouseEvent<HTMLAnchorElement, MouseEvent>) {
+    e.preventDefault()
+    sortBy === 'title_asc' ? setSortBy('title_desc') : setSortBy('title_asc')
+  }
+
+  useEffect(() => {
+    getMp3s()
+  }, [sortBy])
 
   return (
     <div className='container-fluid'>
@@ -238,10 +268,26 @@ export default function Mp3s({
                     <input type='checkbox' onClick={selectAllNoneMp3s} />
                   )}
                 </th>
-                <th>Title</th>
-                <th>Album</th>
-                <th className='text-center'>Track</th>
-                <th>Artist</th>
+                <th>
+                  <a href='#' onMouseDown={sortByTitle}>
+                    Title
+                  </a>
+                </th>
+                <th>
+                  <a href='#' onMouseDown={sortByAlbum}>
+                    Album
+                  </a>
+                </th>
+                <th className='text-center'>
+                  <a href='#' onMouseDown={sortByTrack}>
+                    Track
+                  </a>
+                </th>
+                <th>
+                  <a href='#' onMouseDown={sortByArtist}>
+                    Artist
+                  </a>
+                </th>
                 <th></th>
               </tr>
             </thead>

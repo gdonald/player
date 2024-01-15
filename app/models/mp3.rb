@@ -11,9 +11,7 @@ class Mp3 < ApplicationRecord
 
   validates :filepath, presence: true
   validates :title, presence: true
-  validates :track, numericality: { only_integer: true, greater_than: 0, allow_nil: true }
-
-  scope :ordered, -> { includes(:artist, :album).order('artists.name, albums.name, mp3s.track, mp3s.title') }
+  validates :track, numericality: { only_integer: true, greater_than: -1, allow_nil: true }
 
   CLEAN = /[^-_0-9a-zA-Z .,()"]/
 
@@ -51,6 +49,26 @@ class Mp3 < ApplicationRecord
 
     result
   }
+
+  scope :ordered, ->(param) { includes(:artist, :album).order(order_by(param)) }
+
+  def self.order_by(param) # rubocop:disable Metrics/CyclomaticComplexity
+    parts = param&.split('_')
+    dir = parts&.last&.upcase
+
+    case parts&.first
+    when 'artist'
+      "artists.name #{dir}"
+    when 'album'
+      "albums.name #{dir}"
+    when 'track'
+      "mp3s.track #{dir}"
+    when 'title'
+      "mp3s.title #{dir}"
+    else
+      'artists.name, albums.name, mp3s.track, mp3s.title'
+    end
+  end
 
   def duration
     Time.at(length).utc.strftime('%M:%S')

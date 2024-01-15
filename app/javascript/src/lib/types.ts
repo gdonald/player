@@ -1,9 +1,10 @@
 export interface Mp3Type {
-  id: number
+  [key: string]: string
+  id: string
   title: string
-  track: number
   artist_name: string
   album_name: string
+  track: string
 }
 
 export interface EditMp3Type {

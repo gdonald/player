@@ -211,7 +211,7 @@ export default function App() {
                     setQ={setQ}
                   ></Mp3s>
                 )}
-                {show && show.entity === 'editmp3' && (
+                {show && show.entity === 'mp3' && (
                   <Mp3
                     id={show.id}
                     showWait={showWait}

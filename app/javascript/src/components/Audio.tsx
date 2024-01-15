@@ -1,4 +1,4 @@
-import React, { useEffect, useRef } from 'react'
+import React, { useRef } from 'react'
 
 export default function Audio({
   src,
@@ -13,20 +13,20 @@ export default function Audio({
     doSrcEnded(true)
   }
 
-  if (!src) {
-    return <div></div>
-  }
-
   return (
-    <audio
-      controls
-      autoPlay
-      src={src}
-      preload='auto'
-      ref={audioRef}
-      onEnded={audioEnded}
-    >
-      Your browser does not support the <code>audio</code> element.
-    </audio>
+    <div>
+      {src && (
+        <audio
+          controls
+          autoPlay
+          src={src}
+          preload='auto'
+          ref={audioRef}
+          onEnded={audioEnded}
+        >
+          Your browser does not support the <code>audio</code> element.
+        </audio>
+      )}
+    </div>
   )
 }
