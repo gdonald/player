@@ -6,6 +6,7 @@ git_source(:github) { |repo| "https://github.com/#{repo}.git" }
 ruby '3.3.0'
 
 gem 'aasm', '~> 5.5.0'
+gem 'bcrypt', '~> 3.1.18'
 gem 'rails', '~> 7.1.0'
 
 gem 'cssbundling-rails'

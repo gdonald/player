@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.1].define(version: 14) do
+ActiveRecord::Schema[7.1].define(version: 15) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pgcrypto"
   enable_extension "plpgsql"
@@ -167,6 +167,15 @@ ActiveRecord::Schema[7.1].define(version: 14) do
     t.string "state", default: "unscanned", null: false
     t.index ["path"], name: "index_sources_on_path", unique: true
     t.index ["state"], name: "index_sources_on_state"
+  end
+
+  create_table "users", force: :cascade do |t|
+    t.string "username", limit: 32, null: false
+    t.string "p_salt", limit: 80
+    t.string "p_hash", limit: 80
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["username"], name: "index_users_on_username", unique: true
   end
 
 end

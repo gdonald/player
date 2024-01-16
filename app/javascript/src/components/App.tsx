@@ -11,8 +11,10 @@ import Queue from './Queue'
 import Source from './Source'
 import Sources from './Sources'
 import Wait from './Wait'
+import LoginForm from './LoginForm'
 
 export default function App() {
+  const [authenticated, setAuthenticated] = useState<boolean>(false)
   const [q, setQ] = useState<string | null>(null)
   const [show, setShow] = useState<ShowType | null>(null)
   const [message, setMessage] = useState<string | null>(null)
@@ -152,6 +154,23 @@ export default function App() {
     setWait(val)
   }
 
+  const checkAuthenticated = async () => {
+    const req = await fetch(`/api/sessions/active`, {
+      method: 'GET',
+      mode: 'cors',
+      credentials: 'include',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+    }).then((res) => {
+      if (res.ok) {
+        setAuthenticated(true)
+      } else {
+        setAuthenticated(false)
+      }
+    })
+  }
+
   useEffect(() => {
     setShow({ entity: 'mp3s', id: 0 })
   }, [])
@@ -164,105 +183,119 @@ export default function App() {
     nextQueuedMp3()
   }, [srcEnded])
 
-  return (
-    <div className='container-fluid vh-100'>
-      <div className='row'>
-        <div className='col-2'>
-          <div className='row border-bottom border-dark'>
-            <div className='menu-items'>
-              {<Wait wait={wait}></Wait>}
-              <Menu
-                setShow={setShow}
-                showMessage={showMessage}
-                show={show}
-              ></Menu>
+  useEffect(() => {
+    checkAuthenticated()
+  }, [])
+
+  if (!authenticated) {
+    return <LoginForm setAuthenticated={setAuthenticated}></LoginForm>
+  }
+
+  if (authenticated) {
+    return (
+      <div className='container-fluid vh-100'>
+        <div className='row'>
+          <div className='col-2'>
+            <div className='row border-bottom border-dark'>
+              <div className='menu-items'>
+                {<Wait wait={wait}></Wait>}
+                <Menu
+                  setShow={setShow}
+                  showMessage={showMessage}
+                  show={show}
+                ></Menu>
+              </div>
             </div>
-          </div>
-          <div className='row'>
-            <div className='queue-wrapper'>
-              <div className='queue-content'>
-                <Queue
-                  queuedMp3s={queuedMp3s}
-                  currentQueuedMp3={currentQueuedMp3}
-                  playQueue={playQueue}
-                  removeQueuedMp3={removeQueuedMp3}
-                  doSrcEnded={doSrcEnded}
-                  setSrc={setSrc}
-                ></Queue>
+            <div className='row'>
+              <div className='queue-wrapper'>
+                <div className='queue-content'>
+                  <Queue
+                    queuedMp3s={queuedMp3s}
+                    currentQueuedMp3={currentQueuedMp3}
+                    playQueue={playQueue}
+                    removeQueuedMp3={removeQueuedMp3}
+                    doSrcEnded={doSrcEnded}
+                    setSrc={setSrc}
+                  ></Queue>
+                </div>
               </div>
             </div>
           </div>
-        </div>
-        <div className='col-10 min-vh-100 border-start border-dark'>
-          <div className='main-wrapper'>
-            <div className='row main-content pt-2'>
-              <div className='p-0'>
-                {message && (
-                  <Alert message={message} setMessage={setMessage}></Alert>
-                )}
-                {show && show.entity === 'mp3s' && (
-                  <Mp3s
-                    showWait={showWait}
-                    playSrc={playSrc}
-                    showMessage={showMessage}
-                    setShow={setShow}
-                    createQueuedMp3={createQueuedMp3}
-                    q={q}
-                    setQ={setQ}
-                  ></Mp3s>
-                )}
-                {show && show.entity === 'mp3' && (
-                  <Mp3
-                    id={show.id}
-                    showWait={showWait}
-                    showMessage={showMessage}
-                    setShow={setShow}
-                  ></Mp3>
-                )}
-                {show && show.entity === 'playlists' && (
-                  <Playlists
-                    setShow={setShow}
-                    showMessage={showMessage}
-                    showWait={showWait}
-                    createQueuedMp3sFromPlaylist={createQueuedMp3sFromPlaylist}
-                  ></Playlists>
-                )}
-                {show && show.entity === 'playlist' && (
-                  <Playlist
-                    setShow={setShow}
-                    showMessage={showMessage}
-                    showWait={showWait}
-                    createQueuedMp3={createQueuedMp3}
-                    id={show.id}
-                    createQueuedMp3sFromPlaylist={createQueuedMp3sFromPlaylist}
-                    setQ={setQ}
-                  ></Playlist>
-                )}
-                {show && show.entity === 'sources' && (
-                  <Sources
-                    setShow={setShow}
-                    showMessage={showMessage}
-                    showWait={showWait}
-                  ></Sources>
-                )}
-                {show && show.entity === 'source' && (
-                  <Source
-                    setShow={setShow}
-                    showMessage={showMessage}
-                    showWait={showWait}
-                    id={show.id}
-                  ></Source>
-                )}
+          <div className='col-10 min-vh-100 border-start border-dark'>
+            <div className='main-wrapper'>
+              <div className='row main-content pt-2'>
+                <div className='p-0'>
+                  {message && (
+                    <Alert message={message} setMessage={setMessage}></Alert>
+                  )}
+                  {show && show.entity === 'mp3s' && (
+                    <Mp3s
+                      showWait={showWait}
+                      playSrc={playSrc}
+                      showMessage={showMessage}
+                      setShow={setShow}
+                      createQueuedMp3={createQueuedMp3}
+                      q={q}
+                      setQ={setQ}
+                    ></Mp3s>
+                  )}
+                  {show && show.entity === 'mp3' && (
+                    <Mp3
+                      id={show.id}
+                      showWait={showWait}
+                      showMessage={showMessage}
+                      setShow={setShow}
+                    ></Mp3>
+                  )}
+                  {show && show.entity === 'playlists' && (
+                    <Playlists
+                      setShow={setShow}
+                      showMessage={showMessage}
+                      showWait={showWait}
+                      createQueuedMp3sFromPlaylist={
+                        createQueuedMp3sFromPlaylist
+                      }
+                    ></Playlists>
+                  )}
+                  {show && show.entity === 'playlist' && (
+                    <Playlist
+                      setShow={setShow}
+                      showMessage={showMessage}
+                      showWait={showWait}
+                      createQueuedMp3={createQueuedMp3}
+                      id={show.id}
+                      createQueuedMp3sFromPlaylist={
+                        createQueuedMp3sFromPlaylist
+                      }
+                      setQ={setQ}
+                    ></Playlist>
+                  )}
+                  {show && show.entity === 'sources' && (
+                    <Sources
+                      setShow={setShow}
+                      showMessage={showMessage}
+                      showWait={showWait}
+                    ></Sources>
+                  )}
+                  {show && show.entity === 'source' && (
+                    <Source
+                      setShow={setShow}
+                      showMessage={showMessage}
+                      showWait={showWait}
+                      id={show.id}
+                    ></Source>
+                  )}
+                </div>
               </div>
             </div>
-          </div>
-          <div className='row audio-content border-top border-dark'>
-            <div className='text-center pt-3'>
-              <Audio src={src} doSrcEnded={doSrcEnded}></Audio>
+            <div className='row audio-content border-top border-dark'>
+              <div className='text-center pt-3'>
+                <Audio src={src} doSrcEnded={doSrcEnded}></Audio>
+              </div>
             </div>
           </div>
         </div>
       </div>
-    </div>
-  )
+    )
+  }
 }

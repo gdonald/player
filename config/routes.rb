@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-Rails.application.routes.draw do
+Rails.application.routes.draw do # rubocop:disable Metrics/BlockLength
   namespace :api do
     get :counts, to: 'counts#index'
     resources :queued_mp3s, only: %i[index create destroy]
@@ -19,6 +19,12 @@ Rails.application.routes.draw do
     end
     resources :sources, only: %i[index show update] do
       get :scan, on: :member
+    end
+    resources :sessions, only: %i[create] do
+      collection do
+        get :destroy
+        get :active
+      end
     end
   end
 
