@@ -14,10 +14,20 @@ export default function Sources({
 
   const getSources = async () => {
     showWait(true)
-    const req = await fetch('/api/sources')
-    const data = await req.json()
-    setSources(data.sources)
-    showWait(false)
+    await fetch('/api/sources')
+      .then((req) => {
+        if (!req.ok) {
+          window.location.href = '/'
+        }
+
+        return req.json()
+      })
+      .then((data) => {
+        setSources(data.sources)
+      })
+      .finally(() => {
+        showWait(false)
+      })
   }
 
   useEffect(() => {
@@ -26,17 +36,15 @@ export default function Sources({
 
   function editSource(e: React.MouseEvent<HTMLButtonElement>) {
     e.preventDefault()
-    const id = e.currentTarget.id
-    setShow({ entity: 'source', id: id })
+    setShow({ entity: 'source', id: e.currentTarget.id })
   }
 
   function scanSource(e: React.MouseEvent<HTMLButtonElement>) {
     showWait(true)
-    const id = e.currentTarget.id
 
-    fetch(`/api/sources/${id}/scan`)
-      .then((response) => {
-        if (response.ok) {
+    fetch(`/api/sources/${e.currentTarget.id}/scan`)
+      .then((res) => {
+        if (res.ok) {
           showMessage('Source scanning has been scheduled')
         } else {
           showMessage('Source scanning failed')

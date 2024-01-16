@@ -2,6 +2,8 @@
 
 module Api
   class SourcesController < Api::ApplicationController
+    before_action :current_user
+
     def index
       @sources = Source.ordered
     end

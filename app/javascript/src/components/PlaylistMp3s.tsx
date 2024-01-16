@@ -7,36 +7,39 @@ export default function PlaylistMp3s({
   createQueuedMp3,
   setQ,
   setShow,
+  setMp3sCount,
 }: {
   id: number
   showWait: Function
   createQueuedMp3: Function
   setQ: Function
   setShow: Function
+  setMp3sCount: Function
 }) {
   const [playlistMp3s, setPlaylistMp3s] = useState<PlaylistMp3Type[]>([])
 
   const getMp3s = async () => {
     showWait(true)
-    const req = await fetch(`/api/playlists/${id}/playlist_mp3s`)
-    const data = await req.json()
-    setPlaylistMp3s(data.playlist_mp3s)
-    showWait(false)
-  }
+    await fetch(`/api/playlists/${id}/playlist_mp3s`)
+      .then((res) => {
+        if (!res.ok) {
+          window.location.href = '/'
+        }
 
-  useEffect(() => {
-    getMp3s()
-  }, [])
-
-  function playMp3(e: React.MouseEvent<HTMLAnchorElement>) {
-    e.preventDefault()
-    const id = e.currentTarget.id
-    createQueuedMp3(id)
+        return res.json()
+      })
+      .then((data) => {
+        setPlaylistMp3s(data.playlist_mp3s)
+        setMp3sCount(data.playlist_mp3s.length)
+      })
+      .finally(() => {
+        showWait(false)
+      })
   }
 
   const doMoveHigher = async (playlist_mp3_id: string) => {
     showWait(true)
-    const req = await fetch(
+    await fetch(
       `/api/playlists/${id}/playlist_mp3s/${playlist_mp3_id}/move_higher`,
       {
         method: 'POST',
@@ -46,23 +49,28 @@ export default function PlaylistMp3s({
           'Content-Type': 'application/json',
         },
       }
-    ).finally(() => {
-      showWait(false)
-    })
+    )
+      .then((res) => {
+        if (!res.ok) {
+          window.location.href = '/'
+        }
 
-    const data = await req.json()
-    setPlaylistMp3s(data.playlist_mp3s)
-  }
-
-  function moveHigher(e: React.MouseEvent<HTMLButtonElement>) {
-    e.preventDefault()
-    const id = e.currentTarget.id
-    doMoveHigher(id)
+        return res.json()
+      })
+      .then((data) => {
+        setPlaylistMp3s(data.playlist_mp3s)
+      })
+      .catch((err) => {
+        console.log(err)
+      })
+      .finally(() => {
+        showWait(false)
+      })
   }
 
   const doMoveLower = async (playlist_mp3_id: string) => {
     showWait(true)
-    const req = await fetch(
+    await fetch(
       `/api/playlists/${id}/playlist_mp3s/${playlist_mp3_id}/move_lower`,
       {
         method: 'POST',
@@ -72,46 +80,72 @@ export default function PlaylistMp3s({
           'Content-Type': 'application/json',
         },
       }
-    ).finally(() => {
-      showWait(false)
-    })
+    )
+      .then((res) => {
+        if (!res.ok) {
+          window.location.href = '/'
+        }
 
-    const data = await req.json()
-    setPlaylistMp3s(data.playlist_mp3s)
-  }
-
-  function moveLower(e: React.MouseEvent<HTMLButtonElement>) {
-    e.preventDefault()
-    const id = e.currentTarget.id
-    doMoveLower(id)
+        return res.json()
+      })
+      .then((data) => {
+        setPlaylistMp3s(data.playlist_mp3s)
+      })
+      .catch((err) => {
+        console.log(err)
+      })
+      .finally(() => {
+        showWait(false)
+      })
   }
 
   const doDeleteMp3 = async (playlist_mp3_id: string) => {
     showWait(true)
-    const req = await fetch(
-      `/api/playlists/${id}/playlist_mp3s/${playlist_mp3_id}`,
-      {
-        method: 'DELETE',
-        mode: 'cors',
-        body: JSON.stringify({}),
-        headers: {
-          'Content-Type': 'application/json',
-        },
-      }
-    ).finally(() => {
-      showWait(false)
+    await fetch(`/api/playlists/${id}/playlist_mp3s/${playlist_mp3_id}`, {
+      method: 'DELETE',
+      mode: 'cors',
+      body: JSON.stringify({}),
+      headers: {
+        'Content-Type': 'application/json',
+      },
     })
+      .then((res) => {
+        if (!res.ok) {
+          window.location.href = '/'
+        }
 
-    const data = await req.json()
-    setPlaylistMp3s(data.playlist_mp3s)
+        return res.json()
+      })
+      .then((data) => {
+        setPlaylistMp3s(data.playlist_mp3s)
+        setMp3sCount(data.playlist_mp3s.length)
+      })
+      .catch((err) => {
+        console.log(err)
+      })
+      .finally(() => {
+        showWait(false)
+      })
+  }
+
+  function playMp3(e: React.MouseEvent<HTMLAnchorElement>) {
+    e.preventDefault()
+    createQueuedMp3(e.currentTarget.id)
+  }
+
+  function moveHigher(e: React.MouseEvent<HTMLButtonElement>) {
+    e.preventDefault()
+    doMoveHigher(e.currentTarget.id)
+  }
+
+  function moveLower(e: React.MouseEvent<HTMLButtonElement>) {
+    e.preventDefault()
+    doMoveLower(e.currentTarget.id)
   }
 
   function deleteMp3(e: React.MouseEvent<HTMLButtonElement>) {
     e.preventDefault()
-    const id = e.currentTarget.id
-    if (!id) return
-
-    doDeleteMp3(id)
+    doDeleteMp3(e.currentTarget.id)
   }
 
   function searchByAlbumName(e: React.MouseEvent<HTMLAnchorElement>) {
@@ -127,6 +161,10 @@ export default function PlaylistMp3s({
     setQ(`artist:"${artist_name}"`)
     setShow({ entity: 'mp3s', id: '' })
   }
+
+  useEffect(() => {
+    getMp3s()
+  }, [])
 
   return (
     <div className='container-fluid pt-4 px-0'>

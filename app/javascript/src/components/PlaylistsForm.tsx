@@ -26,7 +26,7 @@ export default function PlaylistsForm({
 
   const doUpdatePlaylist = async (id: string) => {
     showWait(true)
-    const req = await fetch(`/api/playlists/${id}`, {
+    await fetch(`/api/playlists/${id}`, {
       method: 'PUT',
       mode: 'cors',
       body: JSON.stringify({
@@ -37,22 +37,32 @@ export default function PlaylistsForm({
       headers: {
         'Content-Type': 'application/json',
       },
-    }).finally(() => {
-      showWait(false)
     })
+      .then((res) => {
+        if (!res.ok) {
+          window.location.href = '/'
+        }
 
-    const data = await req.json()
+        return res.json()
+      })
+      .then((data) => {
+        if (data.errors) {
+          setErrors(data.errors)
+        } else {
+          setErrors(null)
+          setShow({ entity: 'playlist', id: data.playlist.id })
+        }
 
-    if (data.errors) {
-      setErrors(data.errors)
-    } else {
-      setErrors(null)
-      setShow({ entity: 'playlist', id: data.playlist.id })
-    }
-
-    if (data.message) {
-      showMessage(data.message)
-    }
+        if (data.message) {
+          showMessage(data.message)
+        }
+      })
+      .catch((err) => {
+        console.log(err)
+      })
+      .finally(() => {
+        showWait(false)
+      })
   }
 
   function updatePlaylist(e: React.MouseEvent<HTMLButtonElement>) {
@@ -83,7 +93,7 @@ export default function PlaylistsForm({
     if (!newPlaylist) return
 
     showWait(true)
-    const req = await fetch(`/api/playlists`, {
+    await fetch(`/api/playlists`, {
       method: 'POST',
       mode: 'cors',
       body: JSON.stringify({
@@ -95,22 +105,32 @@ export default function PlaylistsForm({
       headers: {
         'Content-Type': 'application/json',
       },
-    }).finally(() => {
-      showWait(false)
     })
+      .then((res) => {
+        if (!res.ok) {
+          window.location.href = '/'
+        }
 
-    const data = await req.json()
+        return res.json()
+      })
+      .then((data) => {
+        if (data.errors) {
+          setErrors(data.errors)
+        } else {
+          setErrors(null)
+          setShow({ entity: 'playlist', id: data.playlist.id })
+        }
 
-    if (data.errors) {
-      setErrors(data.errors)
-    } else {
-      setErrors(null)
-      setShow({ entity: 'playlist', id: data.playlist.id })
-    }
-
-    if (data.message) {
-      showMessage(data.message)
-    }
+        if (data.message) {
+          showMessage(data.message)
+        }
+      })
+      .catch((err) => {
+        console.log(err)
+      })
+      .finally(() => {
+        showWait(false)
+      })
   }
 
   function createNewPlaylist(e: React.MouseEvent<HTMLButtonElement>) {

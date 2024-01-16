@@ -16,57 +16,71 @@ export default function Playlists({
 
   const getPlaylists = async () => {
     showWait(true)
-    const req = await fetch('/api/playlists')
-    const data = await req.json()
-    setPlaylists(data.playlists)
-    showWait(false)
-  }
+    await fetch('/api/playlists')
+      .then((res) => {
+        if (!res.ok) {
+          window.location.href = '/'
+        }
 
-  useEffect(() => {
-    getPlaylists()
-  }, [])
-
-  function editPlaylist(e: React.MouseEvent<HTMLButtonElement>) {
-    e.preventDefault()
-    const id = e.currentTarget.id
-    setShow({ entity: 'playlist', id: id })
-  }
-
-  function enqueuePlaylist(e: React.MouseEvent<HTMLButtonElement>) {
-    e.preventDefault()
-    const id = e.currentTarget.id
-    createQueuedMp3sFromPlaylist(id)
+        return res.json()
+      })
+      .then((data) => {
+        setPlaylists(data.playlists)
+      })
+      .finally(() => {
+        showWait(false)
+      })
   }
 
   const doDeletePlaylist = async (id: string) => {
     showWait(true)
-    const req = await fetch(`/api/playlists/${id}`, {
+    await fetch(`/api/playlists/${id}`, {
       method: 'DELETE',
       mode: 'cors',
       body: JSON.stringify({}),
       headers: {
         'Content-Type': 'application/json',
       },
-    }).finally(() => {
-      showWait(false)
     })
+      .then((res) => {
+        if (!res.ok) {
+          window.location.href = '/'
+        }
 
-    const data = await req.json()
+        return res.json()
+      })
+      .then((data) => {
+        if (data.message) {
+          showMessage(data.message)
+          getPlaylists()
+        }
+      })
+      .finally(() => {
+        showWait(false)
+      })
+  }
 
-    if (data.message) {
-      showMessage(data.message)
-      getPlaylists()
-    }
+  function editPlaylist(e: React.MouseEvent<HTMLButtonElement>) {
+    e.preventDefault()
+    setShow({ entity: 'playlist', id: e.currentTarget.id })
+  }
+
+  function enqueuePlaylist(e: React.MouseEvent<HTMLButtonElement>) {
+    e.preventDefault()
+    createQueuedMp3sFromPlaylist(e.currentTarget.id)
   }
 
   function deletePlaylist(e: React.MouseEvent<HTMLButtonElement>) {
     e.preventDefault()
 
     if (window.confirm('Are you sure?')) {
-      const id = e.currentTarget.id
-      doDeletePlaylist(id)
+      doDeletePlaylist(e.currentTarget.id)
     }
   }
+
+  useEffect(() => {
+    getPlaylists()
+  }, [])
 
   return (
     <div className='container-fluid'>
@@ -104,13 +118,15 @@ export default function Playlists({
                     role='group'
                     aria-label='Source actions'
                   >
-                    <button
-                      className='btn btn-sm btn-primary'
-                      onClick={enqueuePlaylist}
-                      id={playlist['id'].toString()}
-                    >
-                      Enqueue
-                    </button>
+                    {playlist['mp3s_count'] > 0 && (
+                      <button
+                        className='btn btn-sm btn-primary'
+                        onClick={enqueuePlaylist}
+                        id={playlist['id'].toString()}
+                      >
+                        Enqueue
+                      </button>
+                    )}
                     <button
                       className='btn btn-sm btn-primary'
                       onClick={editPlaylist}

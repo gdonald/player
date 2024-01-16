@@ -2,7 +2,7 @@
 
 module Api
   class SessionsController < ApplicationController
-    before_action :require_login, only: %i[active]
+    before_action :current_user, only: %i[active]
 
     layout 'admin'
 

@@ -2,6 +2,8 @@
 
 module Api
   class PlaylistsController < Api::ApplicationController
+    before_action :current_user
+
     def index
       @playlists = Playlist.ordered
     end

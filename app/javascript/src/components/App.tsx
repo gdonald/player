@@ -176,8 +176,10 @@ export default function App() {
   }, [])
 
   useEffect(() => {
+    if (!authenticated) return
+
     getQueuedMp3s()
-  }, [])
+  }, [authenticated])
 
   useEffect(() => {
     nextQueuedMp3()

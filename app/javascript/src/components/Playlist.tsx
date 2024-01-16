@@ -21,46 +21,63 @@ export default function Playlist({
 }) {
   const [playlist, setPlaylist] = useState<PlaylistType | null>(null)
   const [errors, setErrors] = useState<NewPlaylistErrorType>({ name: null })
+  const [mp3sCount, setMp3sCount] = useState<number>(0)
 
   const getPlaylist = async () => {
     showWait(true)
-    const req = await fetch(`/api/playlists/${id}`)
-    const data = await req.json()
-    setPlaylist(data.playlist)
-    showWait(false)
-  }
+    await fetch(`/api/playlists/${id}`)
+      .then((res) => {
+        if (!res.ok) {
+          window.location.href = '/'
+        }
 
-  useEffect(() => {
-    getPlaylist()
-  }, [id])
+        return res.json()
+      })
+      .then((data) => {
+        setPlaylist(data.playlist)
+      })
+      .finally(() => {
+        showWait(false)
+      })
+  }
 
   const save = async () => {
     if (!playlist) return
 
     showWait(true)
-    const req = await fetch(`/api/playlists/${id}`, {
+    await fetch(`/api/playlists/${id}`, {
       method: 'PUT',
       mode: 'cors',
       body: JSON.stringify({ playlist: { name: playlist.name } }),
       headers: {
         'Content-Type': 'application/json',
       },
-    }).finally(() => {
-      showWait(false)
     })
+      .then((req) => {
+        if (!req.ok) {
+          window.location.href = '/'
+        }
 
-    const data = await req.json()
+        return req.json()
+      })
+      .then((data) => {
+        if (data.errors) {
+          setErrors(data.errors)
+        } else {
+          setPlaylist(data.playlist)
+          setErrors({ name: null })
+        }
 
-    if (data.errors) {
-      setErrors(data.errors)
-    } else {
-      setPlaylist(data.playlist)
-      setErrors({ name: null })
-    }
-
-    if (data.message) {
-      showMessage(data.message)
-    }
+        if (data.message) {
+          showMessage(data.message)
+        }
+      })
+      .catch((err) => {
+        console.log(err)
+      })
+      .finally(() => {
+        showWait(false)
+      })
   }
 
   function savePlaylist(e: React.MouseEvent<HTMLButtonElement>) {
@@ -80,6 +97,10 @@ export default function Playlist({
     e.preventDefault()
     createQueuedMp3sFromPlaylist(id)
   }
+
+  useEffect(() => {
+    getPlaylist()
+  }, [id])
 
   if (!playlist) return <></>
 
@@ -131,13 +152,15 @@ export default function Playlist({
         >
           Save
         </button>{' '}
-        <button
-          type='submit'
-          className='btn btn-primary'
-          onClick={enqueuePlaylist}
-        >
-          Enqueue
-        </button>
+        {mp3sCount > 0 && (
+          <button
+            type='submit'
+            className='btn btn-primary'
+            onClick={enqueuePlaylist}
+          >
+            Enqueue
+          </button>
+        )}
       </form>
       <PlaylistMp3s
         id={id}
@@ -145,6 +168,7 @@ export default function Playlist({
         createQueuedMp3={createQueuedMp3}
         setQ={setQ}
         setShow={setShow}
+        setMp3sCount={setMp3sCount}
       ></PlaylistMp3s>
     </div>
   )

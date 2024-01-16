@@ -2,6 +2,8 @@
 
 module Api
   class CountsController < Api::ApplicationController
+    before_action :current_user
+
     def index
       mp3s_count = Mp3.count
       playlists_count = Playlist.count

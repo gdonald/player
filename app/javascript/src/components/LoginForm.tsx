@@ -9,7 +9,7 @@ export default function LoginForm({
   const [username, setUsername] = useState<string>('gd')
   const [password, setPassword] = useState<string>('changeme')
 
-  const login = async (username: string, password: string) => {
+  const login = async () => {
     if (!username || !password) return
 
     const req = await fetch(`/api/sessions`, {
@@ -29,6 +29,8 @@ export default function LoginForm({
       .then((res) => {
         if (res.ok) {
           setAuthenticated(true)
+        } else {
+          setAuthenticated(false)
         }
       })
       .catch((err) => {
@@ -38,11 +40,7 @@ export default function LoginForm({
 
   function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault()
-    console.log('handleSubmit', username, password)
-
-    if (username && password) {
-      login(username, password)
-    }
+    login()
   }
 
   return (

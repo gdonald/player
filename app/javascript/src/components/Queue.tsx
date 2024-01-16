@@ -32,7 +32,7 @@ export default function Queue({
     }
 
     removeQueuedMp3(id)
-    setSrc(null)
+    // setSrc(null)
   }
 
   function showPlayButton(): boolean {

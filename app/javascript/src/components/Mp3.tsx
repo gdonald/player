@@ -17,21 +17,27 @@ export default function Mp3({
 
   const getMp3 = async () => {
     showWait(true)
-    const req = await fetch(`/api/mp3s/${id}`)
-    const data = await req.json()
-    setMp3(data.mp3)
-    showWait(false)
-  }
+    await fetch(`/api/mp3s/${id}`)
+      .then((res) => {
+        if (!res.ok) {
+          window.location.href = '/'
+        }
 
-  useEffect(() => {
-    getMp3()
-  }, [id])
+        return res.json()
+      })
+      .then((data) => {
+        setMp3(data.mp3)
+      })
+      .finally(() => {
+        showWait(false)
+      })
+  }
 
   const save = async () => {
     if (!mp3) return
 
     showWait(true)
-    const req = await fetch(`/api/mp3s/${id}`, {
+    await fetch(`/api/mp3s/${id}`, {
       method: 'PUT',
       mode: 'cors',
       body: JSON.stringify({
@@ -45,22 +51,32 @@ export default function Mp3({
       headers: {
         'Content-Type': 'application/json',
       },
-    }).finally(() => {
-      showWait(false)
     })
+      .then((res) => {
+        if (!res.ok) {
+          window.location.href = '/'
+        }
 
-    const data = await req.json()
+        return res.json()
+      })
+      .then((data) => {
+        if (data.errors) {
+          setErrors(data.errors)
+        } else {
+          setMp3(data.mp3)
+          setErrors(null)
+        }
 
-    if (data.errors) {
-      setErrors(data.errors)
-    } else {
-      setMp3(data.mp3)
-      setErrors(null)
-    }
-
-    if (data.message) {
-      showMessage(data.message)
-    }
+        if (data.message) {
+          showMessage(data.message)
+        }
+      })
+      .catch((err) => {
+        console.log(err)
+      })
+      .finally(() => {
+        showWait(false)
+      })
   }
 
   function saveMp3(e: React.MouseEvent<HTMLButtonElement>) {
@@ -75,6 +91,10 @@ export default function Mp3({
     showMessage('')
     setShow({ entity: 'mp3s', id: 0 })
   }
+
+  useEffect(() => {
+    getMp3()
+  }, [id])
 
   if (!mp3) return <></>
 

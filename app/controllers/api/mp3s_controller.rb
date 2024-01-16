@@ -2,6 +2,8 @@
 
 module Api
   class Mp3sController < Api::ApplicationController
+    before_action :current_user
+
     def index
       @mp3s = Mp3.ordered(params)
     end

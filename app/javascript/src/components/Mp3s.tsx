@@ -27,47 +27,131 @@ export default function Mp3s({
   const getMp3s = async () => {
     showWait(true)
     const sortQuery = sortBy ? `sort=${sortBy}` : ''
-    const req = await fetch(`/api/mp3s?${sortQuery}`)
-    const data = await req.json()
-    setMp3s(data.mp3s)
-    showWait(false)
+    await fetch(`/api/mp3s?${sortQuery}`)
+      .then((res) => {
+        if (!res.ok) {
+          window.location.href = '/'
+        }
+
+        return res.json()
+      })
+      .then((data) => {
+        setMp3s(data.mp3s)
+      })
+      .finally(() => {
+        showWait(false)
+      })
   }
 
   const searchMp3s = async (url: string) => {
     showWait(true)
     const sortQuery = sortBy ? `sort=${sortBy}` : ''
-    const req = await fetch(`${url}&${sortQuery}`)
-    const data = await req.json()
-    setMp3s(data.mp3s)
-    showWait(false)
+    await fetch(`${url}&${sortQuery}`)
+      .then((res) => {
+        if (!res.ok) {
+          window.location.href = '/'
+        }
+
+        return res.json()
+      })
+      .then((data) => {
+        setMp3s(data.mp3s)
+      })
+      .finally(() => {
+        showWait(false)
+      })
   }
 
   const getPlaylists = async () => {
-    const playlistsReq = await fetch('/api/playlists')
-    const playlistsData = await playlistsReq.json()
-    setPlaylists(playlistsData.playlists)
+    await fetch('/api/playlists')
+      .then((res) => {
+        if (!res.ok) {
+          window.location.href = '/'
+        }
+
+        return res.json()
+      })
+      .then((data) => {
+        setPlaylists(data.playlists)
+      })
   }
 
   const getPlaylistsAndMp3s = async () => {
     showWait(true)
 
-    const playlistsReq = await fetch('/api/playlists')
-    const playlistsData = await playlistsReq.json()
-    setPlaylists(playlistsData.playlists)
-
+    let requestsCompleted = 0
     const sortQuery = sortBy ? `sort=${sortBy}` : ''
+    const mp3sUrl = q
+      ? `/api/mp3s/search?q=${q}&${sortQuery}`
+      : `/api/mp3s?${sortQuery}`
 
-    let mp3sReq
-    if (q) {
-      mp3sReq = await fetch(`/api/mp3s/search?q=${q}&${sortQuery}`)
-    } else {
-      mp3sReq = await fetch(`/api/mp3s?&${sortQuery}`)
-    }
+    await fetch(mp3sUrl)
+      .then((res) => {
+        if (!res.ok) {
+          window.location.href = '/'
+        }
 
-    const mp3sData = await mp3sReq.json()
-    setMp3s(mp3sData.mp3s)
+        return res.json()
+      })
+      .then((data) => {
+        setMp3s(data.mp3s)
+      })
+      .finally(() => {
+        if (++requestsCompleted === 2) {
+          showWait(false)
+        }
+      })
 
-    showWait(false)
+    await fetch('/api/playlists')
+      .then((res) => {
+        if (!res.ok) {
+          window.location.href = '/'
+        }
+
+        return res.json()
+      })
+      .then((data) => {
+        setPlaylists(data.playlists)
+      })
+      .finally(() => {
+        if (++requestsCompleted === 2) {
+          showWait(false)
+        }
+      })
+  }
+
+  const doUpdatePlaylist = async (playlistId: string, mp3Id: string) => {
+    showWait(true)
+    await fetch(`/api/playlists/${playlistId}`, {
+      method: 'PUT',
+      mode: 'cors',
+      body: JSON.stringify({
+        playlist: {
+          playlist_mp3s_attributes: [{ mp3_id: mp3Id }],
+        },
+      }),
+      headers: {
+        'Content-Type': 'application/json',
+      },
+    })
+      .then((res) => {
+        if (!res.ok) {
+          window.location.href = '/'
+        }
+
+        return res.json()
+      })
+      .then((data) => {
+        if (data.message) {
+          showMessage(data.message)
+        }
+      })
+      .catch((err) => {
+        console.log(err)
+      })
+      .finally(() => {
+        showWait(false)
+      })
   }
 
   function search(e: React.ChangeEvent<HTMLInputElement>) {
@@ -99,8 +183,7 @@ export default function Mp3s({
 
   function playMp3(e: React.MouseEvent<HTMLAnchorElement, MouseEvent>) {
     e.preventDefault()
-    const id = e.currentTarget.id
-    createQueuedMp3(id)
+    createQueuedMp3(e.currentTarget.id)
   }
 
   function selectMp3(e: React.MouseEvent<HTMLInputElement, MouseEvent>) {
@@ -152,32 +235,7 @@ export default function Mp3s({
 
   function editMp3(e: React.MouseEvent<HTMLButtonElement, MouseEvent>) {
     e.preventDefault()
-    const id = e.currentTarget.id
-    setShow({ entity: 'mp3', id: id })
-  }
-
-  const doUpdatePlaylist = async (playlistId: string, mp3Id: string) => {
-    showWait(true)
-    const req = await fetch(`/api/playlists/${playlistId}`, {
-      method: 'PUT',
-      mode: 'cors',
-      body: JSON.stringify({
-        playlist: {
-          playlist_mp3s_attributes: [{ mp3_id: mp3Id }],
-        },
-      }),
-      headers: {
-        'Content-Type': 'application/json',
-      },
-    }).finally(() => {
-      showWait(false)
-    })
-
-    const data = await req.json()
-
-    if (data.message) {
-      showMessage(data.message)
-    }
+    setShow({ entity: 'mp3', id: e.currentTarget.id })
   }
 
   function addToPlaylist(e: React.MouseEvent<HTMLAnchorElement, MouseEvent>) {

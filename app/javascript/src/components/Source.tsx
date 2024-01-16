@@ -17,43 +17,59 @@ export default function Source({
 
   const getSource = async () => {
     showWait(true)
-    const req = await fetch(`/api/sources/${id}`)
-    const data = await req.json()
-    setSource(data.source)
-    showWait(false)
-  }
+    await fetch(`/api/sources/${id}`)
+      .then((res) => {
+        if (!res.ok) {
+          window.location.href = '/'
+        }
 
-  useEffect(() => {
-    getSource()
-  }, [id])
+        return res.json()
+      })
+      .then((data) => {
+        setSource(data.source)
+      })
+      .finally(() => {
+        showWait(false)
+      })
+  }
 
   const save = async () => {
     if (!source) return
 
     showWait(true)
-    const req = await fetch(`/api/sources/${id}`, {
+    await fetch(`/api/sources/${id}`, {
       method: 'PUT',
       mode: 'cors',
       body: JSON.stringify({ source: { path: source.path } }),
       headers: {
         'Content-Type': 'application/json',
       },
-    }).finally(() => {
-      showWait(false)
     })
+      .then((req) => {
+        if (!req.ok) {
+          window.location.href = '/'
+        }
 
-    const data = await req.json()
+        return req.json()
+      })
+      .then((data) => {
+        if (data.errors) {
+          setErrors(data.errors)
+        } else {
+          setSource(data.source)
+          setErrors(null)
+        }
 
-    if (data.errors) {
-      setErrors(data.errors)
-    } else {
-      setSource(data.source)
-      setErrors(null)
-    }
-
-    if (data.message) {
-      showMessage(data.message)
-    }
+        if (data.message) {
+          showMessage(data.message)
+        }
+      })
+      .catch((err) => {
+        console.log(err)
+      })
+      .finally(() => {
+        showWait(false)
+      })
   }
 
   function saveSource(e: React.MouseEvent<HTMLButtonElement>) {
@@ -68,6 +84,10 @@ export default function Source({
     showMessage('')
     setShow({ entity: 'sources', id: 0 })
   }
+
+  useEffect(() => {
+    getSource()
+  }, [id])
 
   if (!source) return <></>
 

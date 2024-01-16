@@ -2,6 +2,8 @@
 
 module Api
   class PlaylistMp3sController < Api::ApplicationController
+    before_action :current_user
+
     def index
       playlist = Playlist.find_by(id: params[:playlist_id])
       @playlist_mp3s = playlist.playlist_mp3s.includes(mp3: %i[artist album]).order(:position)

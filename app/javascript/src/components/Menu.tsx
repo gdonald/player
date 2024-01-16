@@ -45,11 +45,19 @@ export default function Menu({
   }
 
   const getCounts = async () => {
-    const response = await fetch('/api/counts')
-    const data = await response.json()
-    setMp3sCount(data.mp3s_count)
-    setPlaylistsCount(data.playlists_count)
-    setSourcesCount(data.sources_count)
+    await fetch('/api/counts')
+      .then((res) => {
+        if (!res.ok) {
+          window.location.href = '/'
+        }
+
+        return res.json()
+      })
+      .then((data) => {
+        setMp3sCount(data.mp3s_count)
+        setPlaylistsCount(data.playlists_count)
+        setSourcesCount(data.sources_count)
+      })
   }
 
   useEffect(() => {
