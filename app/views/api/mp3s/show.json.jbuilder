@@ -8,4 +8,5 @@ json.mp3 do
   json.artist_name @mp3.artist_name
   json.album_name @mp3.album_name
   json.track @mp3.track
+  json.length @mp3.length
 end

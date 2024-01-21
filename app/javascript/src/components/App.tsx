@@ -69,7 +69,7 @@ export default function App() {
 
     if (queuedMp3s.length > 1) {
       setCurrentQueuedMp3(queuedMp3s[1])
-      playSrc(`/api/mp3s/${queuedMp3s[1]['mp3_id']}/play`)
+      playSrc(`/api/mp3s/${queuedMp3s[1]['mp3']['id']}/play`)
       removeQueuedMp3(queuedMp3s[0]['id'].toString())
       return
     }
@@ -79,7 +79,7 @@ export default function App() {
     if (!queuedMp3s || queuedMp3s.length === 0) return
 
     setCurrentQueuedMp3(queuedMp3s[0])
-    playSrc(`/api/mp3s/${queuedMp3s[0]['mp3_id']}/play`)
+    playSrc(`/api/mp3s/${queuedMp3s[0]['mp3']['id']}/play`)
   }
 
   const createQueuedMp3sFromPlaylist = async (id: string) => {

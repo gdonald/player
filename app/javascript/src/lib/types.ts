@@ -49,10 +49,8 @@ export interface PlaylistType {
 
 export interface QueuedMp3Type {
   id: number
-  mp3_id: number
-  title: string
-  artist_name: string
   position: number
+  mp3: Mp3Type
 }
 
 export interface SourceErrorsType {

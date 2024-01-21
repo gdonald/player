@@ -69,7 +69,7 @@ export default function Queue({
                     <i className='bi-trash text-primary'></i>
                   </a>
                 </td>
-                <td className='queue-title'>{queuedMp3['title']}</td>
+                <td className='queue-title'>{queuedMp3['mp3']['title']}</td>
                 <td className='tight queue-current-icon'>
                   {currentQueuedMp3 &&
                   currentQueuedMp3.id === queuedMp3['id'] ? (
