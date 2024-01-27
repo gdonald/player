@@ -102,9 +102,10 @@ export default function App() {
 
     const queuedMp3s = data.queued_mp3s
     setQueuedMp3s(queuedMp3s)
-    if (queuedMp3s.length > 0 && !currentQueuedMp3) {
-      setCurrentQueuedMp3(queuedMp3s[0])
-      playSrc(`/api/mp3s/${queuedMp3s[0]['mp3_id']}/play`)
+
+    if (data.queued_mp3s.length > 0 && !currentQueuedMp3) {
+      setCurrentQueuedMp3(data.queued_mp3s[0])
+      playSrc(`/api/mp3s/${data.queued_mp3s[0]['mp3']['id']}/play`)
     }
   }
 
