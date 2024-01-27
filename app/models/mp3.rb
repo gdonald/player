@@ -13,12 +13,14 @@ class Mp3 < ApplicationRecord
   validates :title, presence: true
   validates :track, numericality: { only_integer: true, greater_than: -1, allow_nil: true }
 
-  CLEAN = /[^-_0-9a-zA-Z .,()"]/
+  CLEAN = /[^-_0-9a-zA-Z .,():'"]/
 
-  scope :search, lambda { |params|
+  scope :search, lambda { |params| # rubocop:disable Metrics/BlockLength
     query = params[:q]
 
-    return all if query.blank?
+    result = Mp3.includes(:artist, :album).references(:artists, :album)
+
+    return result if query.blank?
 
     artist = query.scan(/artist:"(.+?)"/)
     query = query.gsub(/artist:"(.+?)"/, '').strip
@@ -34,25 +36,32 @@ class Mp3 < ApplicationRecord
     parts += phrases unless phrases.empty?
     parts = parts.select(&:present?)
 
-    result = Mp3.includes(:artist, :album).references(:artists, :album)
-
-    ors = parts.map { |p| "artists.name ILIKE '%#{p}%' OR albums.name ILIKE '%#{p}%' OR mp3s.title ILIKE '%#{p}%'" }
+    ors = []
+    ['artists.name', 'albums.name', 'mp3s.title'].each do |field|
+      q = []
+      parts.each do |p|
+        p = p.gsub("'", "''")
+        q << "#{field} ILIKE '%#{p}%'"
+      end
+      q = q.join(' AND ')
+      ors << "(#{q})" if q.present?
+    end
     result = result.where(ors.join(' OR ')) if ors.any?
 
     if artist.any?
-      artist = artist.first.first.gsub(CLEAN, '')
+      artist = artist.first.first.gsub(CLEAN, '').gsub("'", "''")
       result = result.where("artists.name ILIKE '#{artist}'")
     end
 
     if album.any?
-      album = album.first.first.gsub(CLEAN, '')
+      album = album.first.first.gsub(CLEAN, '').gsub("'", "''")
       result = result.where("albums.name ILIKE '#{album}'")
     end
 
     result.order(order_by(params[:sort]))
   }
 
-  scope :ordered, ->(params) { includes(:artist, :album).order(order_by(params[:sort])) }
+  scope :ordered, ->(params) { includes(:artist, :album).references(:artists, :album).order(order_by(params[:sort])) }
 
   def self.order_by(param) # rubocop:disable Metrics/CyclomaticComplexity
     parts = param&.split('_')
