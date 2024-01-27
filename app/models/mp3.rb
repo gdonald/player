@@ -90,6 +90,8 @@ class Mp3 < ApplicationRecord
       if mp3_parts.size == 2
         artist_name = mp3_parts.first
         title = mp3_parts.last
+      else
+        title = filename
       end
     end
 
@@ -97,11 +99,16 @@ class Mp3 < ApplicationRecord
     album = Album.find_unknown(artist:, name: tag.album)
     length = properties.length_in_seconds
 
-    Mp3.create!(filepath:, source:, artist:, album:, title:, length:,
-                genre: tag.genre,
-                year: tag.year,
-                track: tag.track,
-                comment: tag.comment)
+    begin
+      Mp3.create!(filepath:, source:, artist:, album:, title:, length:,
+                  genre: tag.genre,
+                  year: tag.year,
+                  track: tag.track,
+                  comment: tag.comment)
+    rescue StandardError => e
+      Rails.logger.error("Error creating mp3: #{e.message}")
+      raise e
+    end
   end
 
   def do_update(ref) # rubocop:disable Metrics/AbcSize
