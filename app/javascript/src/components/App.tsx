@@ -173,6 +173,12 @@ export default function App() {
     })
   }
 
+  const setPageTitle = () => {
+    document.title = currentQueuedMp3
+      ? `${currentQueuedMp3.mp3.artist_name}: ${currentQueuedMp3.mp3.title}`
+      : 'Player'
+  }
+
   useEffect(() => {
     setShow({ entity: 'mp3s', id: 0 })
   }, [])
@@ -190,6 +196,10 @@ export default function App() {
   useEffect(() => {
     checkAuthenticated()
   }, [])
+
+  useEffect(() => {
+    setPageTitle()
+  }, [currentQueuedMp3])
 
   if (!authenticated) {
     return <LoginForm setAuthenticated={setAuthenticated}></LoginForm>
