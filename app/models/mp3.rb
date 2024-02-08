@@ -3,6 +3,8 @@
 require 'taglib'
 
 class Mp3 < ApplicationRecord
+  CLEAN = /[^-_0-9a-zA-Z .,():'"]/
+
   belongs_to :source, counter_cache: true
   belongs_to :album, counter_cache: true
   belongs_to :artist, counter_cache: true
@@ -13,7 +15,7 @@ class Mp3 < ApplicationRecord
   validates :title, presence: true
   validates :track, numericality: { only_integer: true, greater_than: -1, allow_nil: true }
 
-  CLEAN = /[^-_0-9a-zA-Z .,():'"]/
+  before_create :set_file_hash
 
   scope :search, lambda { |params| # rubocop:disable Metrics/BlockLength
     query = params[:q]
@@ -155,5 +157,20 @@ class Mp3 < ApplicationRecord
 
   def album_name
     album&.name
+  end
+
+  def set_file_hash
+    self.file_hash = calculated_file_hash
+  end
+
+  def calculated_file_hash
+    sha256 = Digest::SHA256.new
+
+    File.open(filepath, 'rb') do |file|
+      buffer = String.new
+      sha256.update(buffer) while file.read(4096, buffer)
+    end
+
+    sha256.hexdigest
   end
 end

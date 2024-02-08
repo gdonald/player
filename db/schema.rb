@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.1].define(version: 20) do
+ActiveRecord::Schema[7.1].define(version: 21) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pgcrypto"
   enable_extension "plpgsql"
@@ -124,6 +124,7 @@ ActiveRecord::Schema[7.1].define(version: 20) do
     t.text "comment"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.string "file_hash"
     t.index ["album_id"], name: "index_mp3s_on_album_id"
     t.index ["artist_id", "album_id", "title", "length"], name: "index_mp3s_on_artist_id_and_album_id_and_title_and_length", unique: true
     t.index ["artist_id"], name: "index_mp3s_on_artist_id"

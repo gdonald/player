@@ -10,5 +10,6 @@ json.queued_mp3s @queued_mp3s do |queued_mp3|
     json.album_name queued_mp3.mp3.album_name
     json.track queued_mp3.mp3.track
     json.length queued_mp3.mp3.length
+    json.file_hash queued_mp3.mp3.file_hash
   end
 end
