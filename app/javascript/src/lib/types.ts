@@ -28,13 +28,9 @@ export interface NewPlaylistErrorType {
 
 export interface PlaylistMp3Type {
   id: number
-  mp3_id: number
-  title: string
-  artist_name: string
-  album_name: string
-  track: number
   first: boolean
   last: boolean
+  mp3: Mp3Type
 }
 
 export interface NewPlaylistType {

@@ -188,28 +188,28 @@ export default function PlaylistMp3s({
                 <a
                   href='#'
                   onClick={playMp3}
-                  id={playlistMp3['mp3_id'].toString()}
+                  id={playlistMp3['mp3']['id'].toString()}
                 >
-                  {playlistMp3['title']}
+                  {playlistMp3['mp3']['title']}
                 </a>
               </td>
               <td>
                 <a
                   href='#'
                   onClick={searchByAlbumName}
-                  data-album-name={playlistMp3['album_name']}
+                  data-album-name={playlistMp3['mp3']['album_name']}
                 >
-                  {playlistMp3['album_name']}
+                  {playlistMp3['mp3']['album_name']}
                 </a>
               </td>
-              <td className='text-center'>{playlistMp3['track']}</td>
+              <td className='text-center'>{playlistMp3['mp3']['track']}</td>
               <td>
                 <a
                   href='#'
                   onClick={searchByArtistName}
-                  data-artist-name={playlistMp3['artist_name']}
+                  data-artist-name={playlistMp3['mp3']['artist_name']}
                 >
-                  {playlistMp3['artist_name']}
+                  {playlistMp3['mp3']['artist_name']}
                 </a>
               </td>
               <td className='tight'>
