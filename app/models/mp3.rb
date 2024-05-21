@@ -52,22 +52,24 @@ class Mp3 < ApplicationRecord
 
     if artist.any?
       artist = artist.first.first.gsub(CLEAN, '').gsub("'", "''")
-      result = result.where("artists.name ILIKE '#{artist}'")
+      result = result.where('artists.name ILIKE ?', artist)
     end
 
     if album.any?
       album = album.first.first.gsub(CLEAN, '').gsub("'", "''")
-      result = result.where("albums.name ILIKE '#{album}'")
+      result = result.where('albums.name ILIKE ?', album)
     end
 
-    result.order(order_by(params[:sort]))
+    result.order(calculate_sort(params[:sort]))
   }
 
-  scope :ordered, ->(params) { includes(:artist, :album).references(:artists, :album).order(order_by(params[:sort])) }
+  scope :ordered, lambda { |params|
+                    includes(:artist, :album).references(:artists, :album).order(calculate_sort(params[:sort]))
+                  }
 
-  def self.order_by(param) # rubocop:disable Metrics/CyclomaticComplexity
+  def self.calculate_sort(param) # rubocop:disable Metrics/CyclomaticComplexity
     parts = param&.split('_')
-    dir = parts&.last&.upcase
+    dir = parts&.last == 'desc' ? 'DESC' : 'ASC'
 
     case parts&.first
     when 'artist'
