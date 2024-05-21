@@ -2,6 +2,7 @@ require:
   - rubocop-rspec
   - rubocop-capybara
   - rubocop-rails
+  - rubocop-rspec_rails
 AllCops:
   Exclude:
     - 'db/schema.rb'

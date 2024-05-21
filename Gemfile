@@ -16,7 +16,7 @@ gem 'pg'
 gem 'sprockets-rails'
 
 gem 'acts_as_list'
-gem 'good_job', '~> 3.22.0'
+gem 'good_job', '~> 3.28.3'
 gem 'nokogiri', '>= 1.13.6'
 
 gem 'taglib-ruby'
@@ -38,5 +38,5 @@ group :test do
   gem 'rubocop'
   gem 'rubocop-rails'
   gem 'rubocop-rspec'
-  gem 'selenium-webdriver', '~> 4.16.0'
+  gem 'selenium-webdriver', '~> 4.21.1'
 end
