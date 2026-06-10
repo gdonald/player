@@ -25,7 +25,7 @@ group :development, :test do
   gem 'debug', platforms: %i[mri mingw x64_mingw]
   gem 'dotenv-rails'
   gem 'pry'
-  gem 'puma', '~> 6.4.3'
+  gem 'puma', '~> 7.2.1'
   gem 'rspec-rails'
 end
 
