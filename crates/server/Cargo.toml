@@ -1,0 +1,43 @@
+[package]
+name = "player-server"
+version = "0.1.0"
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+publish.workspace = true
+
+[[bin]]
+name = "player"
+path = "src/main.rs"
+
+[dependencies]
+player-types.workspace = true
+player-core.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+anyhow = "1"
+axum = "0.8"
+bcrypt = "0.17"
+clap = { version = "4", features = ["derive", "env"] }
+dotenvy = "0.15"
+lofty = "0.22"
+rpassword = "7"
+sha2 = "0.10"
+hex = "0.4"
+sqlx = { version = "0.8", default-features = false, features = ["macros", "migrate", "postgres", "runtime-tokio", "tls-rustls", "time"] }
+time = "0.3"
+tokio = { version = "1", features = ["macros", "rt-multi-thread", "net", "signal", "sync", "fs"] }
+tower = { version = "0.5", features = ["util"] }
+tower-http = { version = "0.6", features = ["fs", "trace"] }
+tower-sessions = "0.14"
+tower-sessions-sqlx-store = { version = "0.15", features = ["postgres"] }
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter"] }
+walkdir = "2"
+
+[dev-dependencies]
+http-body-util = "0.1"
+tempfile = "3"
+
+[lints]
+workspace = true

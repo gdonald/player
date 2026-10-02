@@ -1,0 +1,30 @@
+[workspace]
+resolver = "3"
+members = ["crates/types", "crates/core", "crates/server", "crates/client"]
+
+[workspace.package]
+edition = "2024"
+rust-version = "1.96"
+license = "MIT"
+publish = false
+
+[workspace.lints.rust]
+unsafe_code = "forbid"
+
+[workspace.lints.clippy]
+all = { level = "warn", priority = -1 }
+pedantic = { level = "warn", priority = -1 }
+module_name_repetitions = "allow"
+must_use_candidate = "allow"
+missing_errors_doc = "allow"
+missing_panics_doc = "allow"
+
+[workspace.dependencies]
+player-types = { path = "crates/types" }
+player-core = { path = "crates/core" }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+
+[profile.release.package.player-client]
+opt-level = "z"
+codegen-units = 1
