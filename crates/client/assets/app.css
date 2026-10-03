@@ -416,7 +416,7 @@ body,
   background: linear-gradient(#e8d69a, #b39a4c);
 }
 
-/* Equalizer window, under the playlist */
+/* Equalizer window, between the playlist and the spectrum analyzer */
 
 .equalizer {
   flex: none;
@@ -979,7 +979,7 @@ p.text-center {
   }
 }
 
-/* Spectrum analyzer, between the playlist and the equalizer */
+/* Spectrum analyzer, under the equalizer */
 
 .visualizer {
   flex: none;
@@ -990,14 +990,14 @@ p.text-center {
   display: block;
   width: calc(100% - 8px);
   margin: 4px 4px 0;
-  height: 56px;
+  height: 88px;
   background: var(--wa-lcd);
   border: 1px solid;
   border-color: var(--wa-bevel-dark) var(--wa-bevel-light) var(--wa-bevel-light) var(--wa-bevel-dark);
 }
 
 /* Phones and narrow windows: one scrolling column of player, library
-   buttons, page content, then the playlist, visualization, and equalizer
+   buttons, page content, then the playlist, equalizer, and visualization
    windows, each of which collapses with its button. */
 
 @media (max-width: 767.98px) {

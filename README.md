@@ -17,18 +17,13 @@ Web-based MP3 player. The server is Rust (axum, sqlx, Postgres). The browser cli
 ./run.sh
 ```
 
-The first run creates the `player_development` database (or the one named in `DATABASE_URL`), migrates it, and seeds it with the user `gd`, password `changeme`.
- Add another user with `player user add <username>`, which prompts for the password twice.
+The first run creates the `player_development` database (or the one named in `DATABASE_URL`), migrates it, and seeds it with the user `gd`, password `changeme`. Add another user with `player user add <username>`.
 
 ## Running
 
 `./run.sh` starts the server on `PORT` (default 4000) and `trunk serve` on `HOST` (default 10.0.0.45) port 9000, which proxies `/api/` to the server. Open http://10.0.0.45:9000, log in, add your music directory on the Sources page, and press Scan. Scan again after the music directory changes.
 
 For a single process, build the client with `trunk build` in `crates/client` and run `player serve`, which serves `crates/client/dist` (or `WEB_ROOT`) on `PORT` (default 3000).
-
-## Moving from the Rails version
-
-`player import --from postgres://localhost/player_development_rails` copies sources, songs, playlists, the queue, and users from the Rails app's database into an empty database. Rails password hashes keep working.
 
 ## Tests
 

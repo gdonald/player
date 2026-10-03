@@ -275,7 +275,7 @@ pub async fn record_played(pool: &PgPool, mp3_id: i64) -> AppResult<()> {
 }
 
 /// Appends the playlist's mp3s to the queue in playlist order. A missing
-/// playlist adds nothing, as `Playlist.find_by` did.
+/// playlist adds nothing.
 pub async fn enqueue(pool: &PgPool, id: i64) -> sqlx::Result<()> {
     let mut transaction = pool.begin().await?;
     queue::lock(&mut transaction).await?;

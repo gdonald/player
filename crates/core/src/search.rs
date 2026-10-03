@@ -35,8 +35,8 @@ pub fn parse(query: &str) -> SearchQuery {
     }
 }
 
-/// Mirrors Ruby's `scan(/prefix(.+?)"/)` plus `gsub` of the same pattern: each
-/// capture holds at least one character and ends at the next double quote.
+/// Returns each `prefix..."` capture and the text with those matches removed.
+/// A capture holds at least one character and ends at the next double quote.
 fn extract_quoted(text: &str, prefix: &str) -> (Vec<String>, String) {
     let mut captures = Vec::new();
     let mut remainder = String::new();

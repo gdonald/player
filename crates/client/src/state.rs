@@ -81,7 +81,7 @@ impl Ctx {
         Waiting(self.waiting)
     }
 
-    /// Switches views and clears the alert, as the menu and Go Back did.
+    /// Switches views and clears the alert.
     pub fn show(&self, page: Page) {
         self.message.set(String::new());
         self.page.set(page);
@@ -95,7 +95,7 @@ impl Ctx {
         }
     }
 
-    /// Shows the 422 message, as the React views did, and returns its field errors.
+    /// Shows the 422 message and returns its field errors.
     pub fn invalid(&self, error: &ApiError) -> Option<player_types::FieldErrors> {
         self.fail(error);
         error.field_errors().map(|body| body.errors)

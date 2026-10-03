@@ -3,8 +3,7 @@ use std::collections::BTreeMap;
 use serde::{Deserialize, Deserializer, Serialize};
 use serde_json::Value;
 
-/// A request body that Rails accepted either wrapped in a key (`{"mp3": {...}}`)
-/// or bare, through `ParamsWrapper`.
+/// A request body accepted either wrapped in a key (`{"mp3": {...}}`) or bare.
 pub trait Wrapped {
     const KEY: &'static str;
 }
@@ -311,7 +310,7 @@ mod tests {
     }
 
     #[test]
-    fn mp3_list_matches_the_rails_index_shape() {
+    fn mp3_list_matches_the_index_shape() {
         let response = Mp3sResponse {
             mp3s: vec![sample_mp3()],
         };
@@ -354,7 +353,7 @@ mod tests {
     }
 
     #[test]
-    fn playlist_params_read_the_react_create_body() {
+    fn playlist_params_read_string_and_number_mp3_ids() {
         let body =
             json!({"name": "Mix", "playlist_mp3s_attributes": [{"mp3_id": "3"}, {"mp3_id": 4}]});
 
@@ -392,7 +391,7 @@ mod tests {
     }
 
     #[test]
-    fn error_response_matches_the_rails_errors_shape() {
+    fn error_response_matches_the_errors_shape() {
         let mut errors = FieldErrors::new();
         errors.insert("name".to_string(), vec!["can't be blank".to_string()]);
 

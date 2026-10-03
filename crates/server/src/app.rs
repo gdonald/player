@@ -34,8 +34,8 @@ impl AppState {
 
 pub type App = MapRequest<Router, fn(Request) -> Request>;
 
-/// The iOS client asks for `/api/mp3s.json` and the like, which Rails routed
-/// to the same actions as the bare paths.
+/// The iOS client asks for `/api/mp3s.json` and the like, which route to the
+/// same handlers as the bare paths.
 pub fn strip_json_suffix(mut request: Request) -> Request {
     let path = request.uri().path();
 

@@ -92,7 +92,7 @@ async fn index_sorts_by_the_requested_column(pool: PgPool) {
 }
 
 #[sqlx::test]
-async fn index_rows_have_the_rails_fields(pool: PgPool) {
+async fn index_rows_have_the_ios_client_fields(pool: PgPool) {
     let mut app = TestApp::logged_in(pool).await;
     let id = insert_mp3(app.pool(), Mp3Seed::default()).await;
 

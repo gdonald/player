@@ -3,7 +3,6 @@ pub mod cli;
 pub mod db;
 pub mod error;
 pub mod fixtures;
-pub mod import;
 pub mod library;
 pub mod mp3s;
 pub mod params;

@@ -126,8 +126,8 @@ fn Layout() -> impl IntoView {
                     <div class="row app-fill area-windows">
                         <div class="queue-wrapper">
                             <Queue />
-                            <Visualizer />
                             <Equalizer />
+                            <Visualizer />
                         </div>
                     </div>
                 </div>

@@ -57,13 +57,13 @@ async function playTone(page: Page) {
   });
 }
 
-test("the analyzer sits between the playlist and the equalizer", async ({ page }) => {
+test("the analyzer sits under the equalizer, which sits under the playlist", async ({ page }) => {
   const playlist = await page.locator(".playlist").boundingBox();
-  const analyzer = await page.locator(".visualizer").boundingBox();
   const equalizer = await page.locator(".equalizer").boundingBox();
+  const analyzer = await page.locator(".visualizer").boundingBox();
 
-  expect(analyzer!.y).toBeGreaterThanOrEqual(playlist!.y + playlist!.height - 1);
-  expect(equalizer!.y).toBeGreaterThanOrEqual(analyzer!.y + analyzer!.height - 1);
+  expect(equalizer!.y).toBeGreaterThanOrEqual(playlist!.y + playlist!.height - 1);
+  expect(analyzer!.y).toBeGreaterThanOrEqual(equalizer!.y + equalizer!.height - 1);
 });
 
 test("the analyzer shows no bars while nothing plays", async ({ page }) => {

@@ -6,7 +6,7 @@ use serde_json::Value;
 
 use crate::error::AppError;
 
-/// A JSON body accepted either wrapped in its Rails key or bare.
+/// A JSON body accepted either wrapped in its key or bare.
 #[derive(Debug)]
 pub struct Params<T>(pub T);
 

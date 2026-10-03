@@ -98,7 +98,7 @@ impl IntoResponse for AppError {
     }
 }
 
-/// Collects Rails-style `{field: [messages]}` validation errors.
+/// Collects `{field: [messages]}` validation errors.
 #[derive(Debug, Default)]
 pub struct Validation {
     errors: FieldErrors,

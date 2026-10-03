@@ -101,6 +101,26 @@ mod tests {
     }
 
     #[sqlx::test]
+    async fn connect_opens_a_pool_at_the_given_url(pool: PgPool) {
+        let options = pool.connect_options();
+        let url = format!(
+            "postgres://{}@{}:{}/{}",
+            options.get_username(),
+            options.get_host(),
+            options.get_port(),
+            options.get_database().unwrap()
+        );
+
+        let connected = connect(&url).await.unwrap();
+
+        let one: i32 = sqlx::query_scalar("SELECT 1")
+            .fetch_one(&connected)
+            .await
+            .unwrap();
+        assert_eq!(one, 1);
+    }
+
+    #[sqlx::test]
     async fn migrate_is_repeatable(pool: PgPool) {
         migrate(&pool).await.unwrap();
         migrate(&pool).await.unwrap();

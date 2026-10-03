@@ -127,7 +127,7 @@ pub async fn filepath(pool: &PgPool, id: i64) -> sqlx::Result<Option<String>> {
         .await
 }
 
-/// Track as Rails validated it: empty is nil, otherwise an integer above -1.
+/// Track is empty or an integer above -1.
 pub fn parse_track(value: Option<&Value>) -> Result<Option<i32>, &'static str> {
     let number = match value {
         None | Some(Value::Null) => return Ok(None),

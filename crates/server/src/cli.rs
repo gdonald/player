@@ -4,7 +4,7 @@ use clap::{Parser, Subcommand};
 use sqlx::PgPool;
 
 use crate::users::{self, NewUser};
-use crate::{db, import, seeds, sources};
+use crate::{db, seeds, sources};
 
 #[derive(Debug, Parser)]
 #[command(name = "player", about = "Web-based MP3 player")]
@@ -30,12 +30,6 @@ pub enum Command {
     Source {
         #[command(subcommand)]
         command: SourceCommand,
-    },
-    /// Copy every row from the Rails app's database into this empty one.
-    Import {
-        /// Database URL of the Rails app, for example `postgres://localhost/player_development`
-        #[arg(long)]
-        from: String,
     },
 }
 
@@ -96,11 +90,6 @@ pub async fn run(
         } => {
             let source = sources::create(pool, &path).await?;
             writeln!(output, "Created source {} at {}", source.id, source.path)?;
-        }
-        Command::Import { from } => {
-            let rails = db::connect(&from).await?;
-            let counts = import::run(pool, &rails).await?;
-            writeln!(output, "{counts}")?;
         }
     }
 
@@ -163,10 +152,6 @@ mod tests {
             Some(Command::User {
                 command: UserCommand::Add { .. }
             })
-        ));
-        assert!(matches!(
-            Cli::parse_from(["player", "import", "--from", "postgres://x/y"]).command,
-            Some(Command::Import { .. })
         ));
     }
 
@@ -263,35 +248,5 @@ mod tests {
 
         result.unwrap();
         assert!(output.starts_with("Created source ") && output.ends_with(" at /music\n"));
-    }
-
-    #[sqlx::test]
-    async fn import_reads_the_rails_database_at_the_given_url(pool: PgPool) {
-        crate::import::tests::rails_pool(&pool).await;
-
-        let options = pool.connect_options();
-        let url = format!(
-            "postgres://{}@{}:{}/{}?options[search_path]=rails",
-            options.get_username(),
-            options.get_host(),
-            options.get_port(),
-            options.get_database().unwrap()
-        );
-
-        let (result, output) = run_command(&pool, Command::Import { from: url }, &[]).await;
-
-        result.unwrap();
-        assert!(output.starts_with("sources: 1\n"));
-    }
-
-    #[sqlx::test]
-    async fn import_from_an_unreachable_database_fails(pool: PgPool) {
-        let command = Command::Import {
-            from: "postgres://127.0.0.1:1/none".to_string(),
-        };
-
-        let (result, _) = run_command(&pool, command, &[]).await;
-
-        assert!(result.is_err());
     }
 }

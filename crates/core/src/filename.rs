@@ -22,7 +22,7 @@ fn file_stem(filepath: &str) -> String {
         .replace(".mp3", "")
 }
 
-/// Splits like Ruby's `String#split('-')`, which drops trailing empty fields.
+/// Splits on `-` and drops trailing empty fields.
 fn split_on_dashes(stem: &str) -> Vec<String> {
     let mut fields: Vec<&str> = stem.split('-').collect();
 
