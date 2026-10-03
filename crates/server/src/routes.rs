@@ -35,6 +35,7 @@ pub fn api(state: AppState) -> Router<AppState> {
             get(mp3s_show).put(mp3s_update).patch(mp3s_update),
         )
         .route("/mp3s/{id}/play", get(mp3s_play))
+        .route("/mp3s/{id}/played", post(mp3s_played))
         .route("/playlists", get(playlists_index).post(playlists_create))
         .route(
             "/playlists/{id}",
@@ -216,6 +217,12 @@ async fn mp3s_play(
     let Ok(response) = ServeFile::new(filepath).oneshot(request).await;
 
     Ok(response.into_response())
+}
+
+async fn mp3s_played(State(state): State<AppState>, Path(id): Path<i64>) -> AppResult<Json<Value>> {
+    playlists::record_played(&state.pool, id).await?;
+
+    Ok(Json(json!({})))
 }
 
 async fn playlists_index(State(state): State<AppState>) -> AppResult<Json<PlaylistsResponse>> {

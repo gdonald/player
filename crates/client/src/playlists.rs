@@ -277,7 +277,7 @@ fn PlaylistMp3s(id: i64, entries: RwSignal<Vec<PlaylistMp3>>) -> impl IntoView {
                         {entry.mp3.title}
                     </a>
                 </td>
-                <td>
+                <td class="col-album">
                     <a
                         href="#"
                         class="search-album"
@@ -289,7 +289,7 @@ fn PlaylistMp3s(id: i64, entries: RwSignal<Vec<PlaylistMp3>>) -> impl IntoView {
                         {entry.mp3.album_name}
                     </a>
                 </td>
-                <td class="text-center">{entry.mp3.track}</td>
+                <td class="text-center col-track">{entry.mp3.track}</td>
                 <td>
                     <a
                         href="#"
@@ -348,8 +348,8 @@ fn PlaylistMp3s(id: i64, entries: RwSignal<Vec<PlaylistMp3>>) -> impl IntoView {
                 <thead>
                     <tr>
                         <th>"Title"</th>
-                        <th>"Album"</th>
-                        <th class="text-center">"Track"</th>
+                        <th class="col-album">"Album"</th>
+                        <th class="text-center col-track">"Track"</th>
                         <th>"Artist"</th>
                         <th></th>
                     </tr>

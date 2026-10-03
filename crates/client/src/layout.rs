@@ -1,19 +1,27 @@
 use leptos::ev::{MouseEvent, SubmitEvent};
 use leptos::prelude::*;
 use leptos::task::spawn_local;
-use player_core::{queue, title};
+use player_core::{playback, queue, title};
 use player_types::CountsResponse;
 
 use crate::api;
+use crate::audio_graph::AudioGraph;
+use crate::equalizer::Equalizer;
 use crate::mp3s::{Mp3Edit, Mp3s};
+use crate::player::Player;
 use crate::playlists::{PlaylistEdit, Playlists};
 use crate::sources::{SourceEdit, Sources};
 use crate::state::{Ctx, Page, ctx};
+use crate::storage;
+
+const PLAYLIST_OPEN_KEY: &str = "player.playlist.open";
+use crate::visualizer::Visualizer;
 
 #[component]
 pub fn App() -> impl IntoView {
     let ctx = Ctx::new();
     provide_context(ctx);
+    ctx.remember_query();
 
     spawn_local(async move {
         ctx.authenticated.set(Some(api::active().await));
@@ -104,27 +112,32 @@ fn LoginForm() -> impl IntoView {
 #[component]
 fn Layout() -> impl IntoView {
     let ctx = ctx();
+    AudioGraph::provide();
 
     view! {
-        <div class="container-fluid vh-100">
-            <div class="row">
-                <div class="col-2">
-                    <div class="row border-bottom border-dark">
+        <div class="container-fluid app-frame">
+            <div class="row h-100">
+                <div class="col-12 col-md-3 app-column app-side">
+                    <div class="row border-bottom border-dark area-library">
                         <div class="menu-items">
-                            <Wait />
                             <Menu />
                         </div>
                     </div>
-                    <div class="row">
+                    <div class="row app-fill area-windows">
                         <div class="queue-wrapper">
-                            <div class="queue-content">
-                                <Queue />
-                            </div>
+                            <Queue />
+                            <Visualizer />
+                            <Equalizer />
                         </div>
                     </div>
                 </div>
-                <div class="col-10 min-vh-100 border-start border-dark">
-                    <div class="main-wrapper">
+                <div class="col-12 col-md-9 app-column app-main border-start border-dark">
+                    <div class="row audio-content border-bottom border-dark area-player">
+                        <div class="h-100 p-0">
+                            <Player />
+                        </div>
+                    </div>
+                    <div class="main-wrapper app-fill area-content">
                         <div class="row main-content pt-2">
                             <div class="p-0">
                                 <Alert />
@@ -137,11 +150,6 @@ fn Layout() -> impl IntoView {
                                     Page::Source(id) => view! { <SourceEdit id=id /> }.into_any(),
                                 }}
                             </div>
-                        </div>
-                    </div>
-                    <div class="row audio-content border-top border-dark">
-                        <div class="text-center pt-3">
-                            <Audio />
                         </div>
                     </div>
                 </div>
@@ -216,37 +224,36 @@ fn Menu() -> impl IntoView {
         let active = move || section.contains(ctx.page.get());
 
         view! {
-            <li
-                class=move || {
-                    if active() {
-                        "list-group-item list-group-item-action active"
-                    } else {
-                        "list-group-item list-group-item-action"
-                    }
-                }
+            <button
+                type="button"
+                class=move || if active() { "library-button winamp-lit" } else { "library-button" }
+                aria-pressed=move || active().to_string()
                 on:click=move |event: MouseEvent| {
                     event.prevent_default();
                     ctx.show(section.page());
                 }
             >
-                <i class=move || {
-                    let icon = section.icon();
-                    if active() { format!("fs-5 bi-{icon} text-white") } else { format!("fs-5 bi-{icon}") }
-                }></i>
-                {format!(" \u{a0}{}", section.label())}
-                <span class="badge bg-dark text-light float-end mt-1">
+                <i class=format!("bi-{}", section.icon())></i>
+                <span class="library-label">{section.label()}</span>
+                <span class="library-count">
                     {move || counts.get().map_or(0, |counts| section.count(&counts))}
                 </span>
-            </li>
+            </button>
         }
     };
 
     view! {
-        <ul class="list-group rounded-0">
-            {item(Section::Mp3s)}
-            {item(Section::Playlists)}
-            {item(Section::Sources)}
-        </ul>
+        <div class="winamp-window library">
+            <div class="winamp-titlebar">
+                <span>"LIBRARY"</span>
+                <Wait />
+            </div>
+            <div class="library-nav">
+                {item(Section::Mp3s)}
+                {item(Section::Playlists)}
+                {item(Section::Sources)}
+            </div>
+        </div>
     }
 }
 
@@ -290,6 +297,9 @@ fn Wait() -> impl IntoView {
 #[component]
 fn Queue() -> impl IntoView {
     let ctx = ctx();
+    let open =
+        RwSignal::new(storage::get(PLAYLIST_OPEN_KEY).is_none_or(|stored| stored != "false"));
+    Effect::new(move |_| storage::set(PLAYLIST_OPEN_KEY, &open.get().to_string()));
 
     let current_id = move || {
         ctx.current
@@ -301,54 +311,93 @@ fn Queue() -> impl IntoView {
             .with(|entries| entries.iter().map(|entry| entry.id).collect());
         queue::shows_play_button(&ids, current_id())
     };
+    let mode_button = move |mode: queue::Mode, icon: &'static str, label: &'static str| {
+        let selected = move || ctx.mode.get() == mode;
+
+        view! {
+            <button
+                type="button"
+                class=move || if selected() { "winamp-button playlist-mode winamp-lit" } else { "winamp-button playlist-mode" }
+                id=format!("mode-{}", mode.as_str())
+                aria-label=label
+                title=label
+                aria-pressed=move || selected().to_string()
+                on:click=move |_: MouseEvent| ctx.mode.set(mode)
+            >
+                <i class=icon></i>
+            </button>
+        }
+    };
+
+    let total_time = move || {
+        let lengths: Vec<Option<i32>> = ctx
+            .queue
+            .with(|entries| entries.iter().map(|entry| entry.mp3.length).collect());
+        playback::format_time(playback::total_seconds(&lengths))
+    };
 
     view! {
-        <div>
-            <Show when=shows_play>
-                <div class="text-end pe-1 queue-play">
-                    <a
-                        href="#"
-                        id="queue-play"
-                        on:click=move |event: MouseEvent| {
-                            event.prevent_default();
-                            ctx.start_if_idle();
-                        }
-                    >
-                        <i class="bi-play-btn text-primary"></i>
-                    </a>
+        <div class=move || if open.get() { "winamp-window playlist" } else { "winamp-window playlist playlist-closed" }>
+            <div class="window-bar">
+                <button
+                    type="button"
+                    class=move || if open.get() { "winamp-button winamp-toggle winamp-lit" } else { "winamp-button winamp-toggle" }
+                    id="playlist-toggle"
+                    aria-label="Playlist"
+                    title="Show or hide the playlist"
+                    aria-expanded=move || open.get().to_string()
+                    on:click=move |_: MouseEvent| open.update(|open| *open = !*open)
+                >
+                    <span class="winamp-light"></span>
+                    "PL"
+                </button>
+                <div class="winamp-titlebar window-bar-title">
+                    <span>"PLAYLIST"</span>
                 </div>
-            </Show>
-            <div>
-                <table class="table table-striped table-hover mb-0" id="queue">
+            </div>
+            <Show when=move || open.get()>
+            <div class="playlist-list">
+                <table class="playlist-table" id="queue">
                     <tbody>
                         {move || {
                             ctx.queue
                                 .get()
                                 .into_iter()
-                                .map(|entry| {
+                                .enumerate()
+                                .map(|(index, entry)| {
                                     let id = entry.id;
                                     let is_current = move || current_id() == Some(id);
+                                    let length = entry
+                                        .mp3
+                                        .length
+                                        .map(|seconds| playback::format_time(f64::from(seconds)))
+                                        .unwrap_or_default();
                                     view! {
-                                        <tr class=move || {
-                                            if is_current() { "align-middle table-primary" } else { "align-middle" }
-                                        }>
-                                            <td class="tight queue-delete-icon">
+                                        <tr
+                                            class=move || if is_current() { "playlist-row table-primary" } else { "playlist-row" }
+                                            title="Double-click to play"
+                                            on:dblclick=move |_| ctx.play_entry(id)
+                                        >
+                                            <td class="playlist-name">
+                                                {format!("{}. {} - ", index + 1, entry.mp3.artist_name)}
+                                                <span class="queue-title">{entry.mp3.title}</span>
+                                            </td>
+                                            <td class="playlist-length">{length}</td>
+                                            <td class="playlist-remove">
                                                 <a
                                                     href="#"
                                                     class="queue-delete"
+                                                    title="Remove"
+                                                    aria-label="Remove"
                                                     on:click=move |event: MouseEvent| {
                                                         event.prevent_default();
+                                                        event.stop_propagation();
                                                         ctx.remove(id);
                                                     }
+                                                    on:dblclick=|event: MouseEvent| event.stop_propagation()
                                                 >
-                                                    <i class="bi-trash text-primary"></i>
+                                                    <i class="bi-x-lg"></i>
                                                 </a>
-                                            </td>
-                                            <td class="queue-title">{entry.mp3.title}</td>
-                                            <td class="tight queue-current-icon">
-                                                <Show when=is_current>
-                                                    <i class="bi-arrow-left-circle-fill text-primary"></i>
-                                                </Show>
                                             </td>
                                         </tr>
                                     }
@@ -358,28 +407,28 @@ fn Queue() -> impl IntoView {
                     </tbody>
                 </table>
             </div>
-        </div>
-    }
-}
-
-#[component]
-fn Audio() -> impl IntoView {
-    let ctx = ctx();
-
-    view! {
-        <div>
-            <Show when=move || ctx.src.get().is_some()>
-                <audio
-                    controls=true
-                    autoplay=true
-                    preload="auto"
-                    src=move || ctx.src.get().unwrap_or_default()
-                    on:ended=move |_| ctx.advance()
-                >
-                    "Your browser does not support the "
-                    <code>"audio"</code>
-                    " element."
-                </audio>
+            <div class="playlist-footer">
+                <div class="playlist-modes" role="group" aria-label="Play mode">
+                    {mode_button(queue::Mode::Play, "bi-arrow-right", "Play through, removing each song as it finishes")}
+                    {mode_button(queue::Mode::LoopOne, "bi-repeat-1", "Loop one song")}
+                    {mode_button(queue::Mode::LoopAll, "bi-repeat", "Loop the playlist")}
+                </div>
+                <Show when=shows_play>
+                    <a
+                        href="#"
+                        class="winamp-button"
+                        id="queue-play"
+                        title="Play the queue"
+                        on:click=move |event: MouseEvent| {
+                            event.prevent_default();
+                            ctx.start_if_idle();
+                        }
+                    >
+                        <i class="bi-play-fill"></i>
+                    </a>
+                </Show>
+                <span class="playlist-total" id="queue-total">{total_time}</span>
+            </div>
             </Show>
         </div>
     }

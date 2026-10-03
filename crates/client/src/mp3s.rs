@@ -144,7 +144,7 @@ pub fn Mp3s() -> impl IntoView {
                             id="button-addon-search"
                             on:click=clear
                         >
-                            "Clear Search"
+                            "Clear"
                         </button>
                     </div>
                 </form>
@@ -173,8 +173,8 @@ pub fn Mp3s() -> impl IntoView {
                                     />
                                 </th>
                                 <th>{sort_header("title", "Title")}</th>
-                                <th>{sort_header("album", "Album")}</th>
-                                <th class="text-center">{sort_header("track", "Track")}</th>
+                                <th class="col-album">{sort_header("album", "Album")}</th>
+                                <th class="text-center col-track">{sort_header("track", "Track")}</th>
                                 <th>{sort_header("artist", "Artist")}</th>
                                 <th></th>
                             </tr>
@@ -256,7 +256,7 @@ fn Mp3Row(
                     {mp3.title}
                 </a>
             </td>
-            <td>
+            <td class="col-album">
                 <a
                     href="#"
                     class="search-album"
@@ -268,7 +268,7 @@ fn Mp3Row(
                     {mp3.album_name}
                 </a>
             </td>
-            <td class="text-center">{mp3.track}</td>
+            <td class="text-center col-track">{mp3.track}</td>
             <td>
                 <a
                     href="#"

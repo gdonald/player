@@ -1,0 +1,4 @@
+# The Media Session API (OS media keys and the now-playing overlay) is behind
+# web-sys's unstable flag.
+[target.wasm32-unknown-unknown]
+rustflags = ["--cfg=web_sys_unstable_apis"]

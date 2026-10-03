@@ -1,8 +1,11 @@
+pub mod equalizer;
 pub mod filename;
 pub mod names;
 pub mod paths;
+pub mod playback;
 pub mod queue;
 pub mod search;
 pub mod selection;
 pub mod sort;
+pub mod spectrum;
 pub mod title;

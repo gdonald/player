@@ -617,3 +617,84 @@ async fn destroying_an_entry_closes_the_gap(pool: PgPool) {
     .unwrap();
     assert_eq!(positions, vec![1, 2]);
 }
+
+async fn record(app: &mut TestApp, mp3_id: i64) -> StatusCode {
+    app.send(Method::POST, &format!("/api/mp3s/{mp3_id}/played"), None)
+        .await
+        .0
+}
+
+async fn recently_played(library: &mut Library) -> Vec<String> {
+    let id: i64 = sqlx::query_scalar("SELECT id FROM playlists WHERE name = 'Recently Played'")
+        .fetch_one(library.app.pool())
+        .await
+        .unwrap();
+
+    titles(&entries(&mut library.app, id).await, "playlist_mp3s")
+}
+
+#[sqlx::test]
+async fn played_songs_go_to_the_top_of_recently_played(pool: PgPool) {
+    let mut library = library(pool).await;
+
+    assert_eq!(
+        record(&mut library.app, library.first).await,
+        StatusCode::OK
+    );
+    record(&mut library.app, library.second).await;
+    record(&mut library.app, library.third).await;
+
+    assert_eq!(
+        recently_played(&mut library).await,
+        vec!["Three", "Two", "One"]
+    );
+}
+
+#[sqlx::test]
+async fn a_song_played_again_moves_back_to_the_top(pool: PgPool) {
+    let mut library = library(pool).await;
+    record(&mut library.app, library.first).await;
+    record(&mut library.app, library.second).await;
+    record(&mut library.app, library.third).await;
+
+    record(&mut library.app, library.second).await;
+
+    assert_eq!(
+        recently_played(&mut library).await,
+        vec!["Two", "Three", "One"]
+    );
+
+    let positions: Vec<i32> = sqlx::query_scalar(
+        "SELECT pm.position FROM playlist_mp3s pm JOIN playlists p ON p.id = pm.playlist_id \
+         WHERE p.name = 'Recently Played' ORDER BY pm.position",
+    )
+    .fetch_all(library.app.pool())
+    .await
+    .unwrap();
+    assert_eq!(positions, vec![1, 2, 3]);
+}
+
+#[sqlx::test]
+async fn recently_played_is_created_when_missing(pool: PgPool) {
+    let mut library = library(pool).await;
+
+    record(&mut library.app, library.first).await;
+
+    assert_eq!(recently_played(&mut library).await, vec!["One"]);
+}
+
+#[sqlx::test]
+async fn recording_a_missing_mp3_is_404(pool: PgPool) {
+    let mut library = library(pool).await;
+
+    assert_eq!(record(&mut library.app, 999).await, StatusCode::NOT_FOUND);
+}
+
+#[sqlx::test]
+async fn recording_requires_a_session(pool: PgPool) {
+    let mut app = TestApp::new(pool).await;
+
+    let (status, _) = app.send(Method::POST, "/api/mp3s/1/played", None).await;
+
+    assert_eq!(status, StatusCode::UNAUTHORIZED);
+}

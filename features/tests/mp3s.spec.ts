@@ -178,3 +178,39 @@ test("the edit breadcrumb returns to the list", async ({ page }) => {
 
   await expect.poll(() => mp3Titles(page)).toEqual(LIBRARY_ORDER);
 });
+
+test("the search is kept across a reload", async ({ page }) => {
+  await page.fill("#search", "encore");
+  await expect.poll(() => mp3Titles(page)).toEqual(["Encore"]);
+
+  await page.reload();
+
+  await expect(page.locator("#search")).toHaveValue("encore");
+  await expect.poll(() => mp3Titles(page)).toEqual(["Encore"]);
+});
+
+test("clear search forgets the kept search", async ({ page }) => {
+  await page.fill("#search", "encore");
+  await expect.poll(() => mp3Titles(page)).toEqual(["Encore"]);
+  await page.click("#button-addon-search");
+  await expect.poll(() => mp3Titles(page)).toEqual(LIBRARY_ORDER);
+
+  await page.reload();
+
+  await expect(page.locator("#search")).toHaveValue("");
+  await expect.poll(() => mp3Titles(page)).toEqual(LIBRARY_ORDER);
+});
+
+test("an artist link search is kept across a reload", async ({ page }) => {
+  await mp3Row(page, "Opening Song").locator(".search-artist").click();
+  await expect.poll(() => mp3Titles(page)).toEqual(["Opening Song", "Second Song"]);
+
+  await page.reload();
+
+  await expect(page.locator("#search")).toHaveValue('artist:"The Testers"');
+  await expect.poll(() => mp3Titles(page)).toEqual(["Opening Song", "Second Song"]);
+});
+
+test("the search button is labeled Clear", async ({ page }) => {
+  await expect(page.locator("#button-addon-search")).toHaveText("Clear");
+});

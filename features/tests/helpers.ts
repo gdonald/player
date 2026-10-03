@@ -69,7 +69,7 @@ export async function logIn(page: Page) {
   await page.fill("#username", USERNAME);
   await page.fill("#password", PASSWORD);
   await page.click("button[type=submit]");
-  await expect(page.locator(".list-group")).toBeVisible();
+  await expect(page.locator(".library-nav")).toBeVisible();
 }
 
 export function alert(page: Page) {
@@ -77,7 +77,7 @@ export function alert(page: Page) {
 }
 
 export function menu(page: Page, label: string) {
-  return page.locator(".list-group-item", { hasText: label });
+  return page.locator(".library-button", { hasText: label });
 }
 
 export async function mp3Titles(page: Page) {

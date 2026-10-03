@@ -224,6 +224,56 @@ pub async fn delete(pool: &PgPool, id: i64) -> AppResult<()> {
     Ok(())
 }
 
+/// Puts the mp3 at the top of Recently Played, creating that playlist when it
+/// is missing. A song already in it moves back to the top.
+pub async fn record_played(pool: &PgPool, mp3_id: i64) -> AppResult<()> {
+    let mut transaction = pool.begin().await?;
+
+    let exists: bool = sqlx::query_scalar("SELECT EXISTS (SELECT 1 FROM mp3s WHERE id = $1)")
+        .bind(mp3_id)
+        .fetch_one(&mut *transaction)
+        .await?;
+
+    if !exists {
+        return Err(AppError::NotFound);
+    }
+
+    let playlist_id: i64 = sqlx::query_scalar(
+        "INSERT INTO playlists (name) VALUES ($1) \
+         ON CONFLICT (name) DO UPDATE SET name = EXCLUDED.name RETURNING id",
+    )
+    .bind(RECENTLY_PLAYED)
+    .fetch_one(&mut *transaction)
+    .await?;
+
+    let removed: Option<i32> = sqlx::query_scalar(
+        "DELETE FROM playlist_mp3s WHERE playlist_id = $1 AND mp3_id = $2 RETURNING position",
+    )
+    .bind(playlist_id)
+    .bind(mp3_id)
+    .fetch_optional(&mut *transaction)
+    .await?;
+
+    sqlx::query(
+        "UPDATE playlist_mp3s SET position = position + 1 \
+         WHERE playlist_id = $1 AND position < COALESCE($2, 2147483647)",
+    )
+    .bind(playlist_id)
+    .bind(removed)
+    .execute(&mut *transaction)
+    .await?;
+
+    sqlx::query("INSERT INTO playlist_mp3s (playlist_id, mp3_id, position) VALUES ($1, $2, 1)")
+        .bind(playlist_id)
+        .bind(mp3_id)
+        .execute(&mut *transaction)
+        .await?;
+
+    transaction.commit().await?;
+
+    Ok(())
+}
+
 /// Appends the playlist's mp3s to the queue in playlist order. A missing
 /// playlist adds nothing, as `Playlist.find_by` did.
 pub async fn enqueue(pool: &PgPool, id: i64) -> sqlx::Result<()> {
