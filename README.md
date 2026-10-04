@@ -25,6 +25,12 @@ The first run creates the `player_development` database (or the one named in `DA
 
 For a single process, build the client with `trunk build` in `crates/client` and run `player serve`, which serves `crates/client/dist` (or `WEB_ROOT`) on `PORT` (default 3000).
 
+## Themes
+
+Pick a theme from the menu at the left of the LIBRARY title bar. The choice is kept in the browser.
+
+Each theme is one stylesheet, `crates/client/themes/theme-<name>.css`, holding every color, border, font, and control shape. `crates/client/assets/app.css` holds only layout, which every theme shares. To add a theme, copy `theme-default.css` to a new `theme-<name>.css`, change it, and add the name and label to `THEMES` in `crates/core/src/theme.rs`. A unit test fails when a file and the list disagree.
+
 ## Tests
 
 ```bash

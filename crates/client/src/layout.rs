@@ -13,6 +13,7 @@ use crate::playlists::{PlaylistEdit, Playlists};
 use crate::sources::{SourceEdit, Sources};
 use crate::state::{Ctx, Page, ctx};
 use crate::storage;
+use crate::theme::{self, ThemePicker};
 
 const PLAYLIST_OPEN_KEY: &str = "player.playlist.open";
 use crate::visualizer::Visualizer;
@@ -22,6 +23,7 @@ pub fn App() -> impl IntoView {
     let ctx = Ctx::new();
     provide_context(ctx);
     ctx.remember_query();
+    theme::apply_stored();
 
     spawn_local(async move {
         ctx.authenticated.set(Some(api::active().await));
@@ -245,6 +247,7 @@ fn Menu() -> impl IntoView {
     view! {
         <div class="winamp-window library">
             <div class="winamp-titlebar">
+                <ThemePicker />
                 <span>"LIBRARY"</span>
                 <Wait />
             </div>
@@ -413,6 +416,19 @@ fn Queue() -> impl IntoView {
                     {mode_button(queue::Mode::LoopOne, "bi-repeat-1", "Loop one song")}
                     {mode_button(queue::Mode::LoopAll, "bi-repeat", "Loop the playlist")}
                 </div>
+                <button
+                    type="button"
+                    class="winamp-button"
+                    id="queue-clear"
+                    title="Clear the playlist"
+                    disabled=move || ctx.queue.with(Vec::is_empty)
+                    on:click=move |event: MouseEvent| {
+                        event.prevent_default();
+                        ctx.clear_queue();
+                    }
+                >
+                    "Clear"
+                </button>
                 <Show when=shows_play>
                     <a
                         href="#"

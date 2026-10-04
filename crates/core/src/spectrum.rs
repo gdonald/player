@@ -21,6 +21,20 @@ pub const PEAK_FALL: f32 = 0.02;
 /// One level per bar, 0 to 1, from the analyser's byte frequency bins. Bars
 /// are spaced evenly in pitch from 40 Hz to 16 kHz, and each takes the
 /// loudest bin in its range, the end bin belonging to the next bar.
+/// Scanline spacing in CSS pixels when a theme sets none.
+pub const DEFAULT_SCANLINE_SPACING: f64 = 3.0;
+
+/// The scanline spacing a theme gives in `--vis-scanline-spacing`, or the
+/// default when it is missing, unreadable, or under one pixel.
+pub fn scanline_spacing(value: &str) -> f64 {
+    value
+        .trim()
+        .parse::<f64>()
+        .ok()
+        .filter(|spacing| *spacing >= 1.0)
+        .unwrap_or(DEFAULT_SCANLINE_SPACING)
+}
+
 pub fn bar_levels(bins: &[u8], sample_rate: f32, bar_count: usize) -> Vec<f32> {
     if bins.is_empty() || bar_count == 0 || sample_rate <= 0.0 {
         return vec![0.0; bar_count];
@@ -88,6 +102,18 @@ mod tests {
     use super::*;
 
     const SAMPLE_RATE: f32 = 44_100.0;
+
+    #[test]
+    fn a_theme_sets_the_scanline_spacing() {
+        assert_eq!(scanline_spacing(" 2 "), 2.0);
+    }
+
+    #[test]
+    fn a_missing_unreadable_or_tiny_spacing_uses_the_default() {
+        for value in ["", "wide", "0.5", "NaN"] {
+            assert_eq!(scanline_spacing(value), DEFAULT_SCANLINE_SPACING);
+        }
+    }
 
     #[test]
     fn silence_gives_empty_bars() {

@@ -95,6 +95,35 @@ test("the analyzer still shows bars through a boosted equalizer", async ({ page 
   await expect.poll(() => barPixels(page), { timeout: 10_000 }).toBeGreaterThan(50);
 });
 
+/// Pixels in the charcoal theme's slate and blue-gray analyzer colors.
+function slatePixels(page: Page) {
+  return page.locator("#visualizer").evaluate((canvas: HTMLCanvasElement) => {
+    const context = canvas.getContext("2d")!;
+    const { data } = context.getImageData(0, 0, canvas.width, canvas.height);
+    let count = 0;
+    for (let index = 0; index < data.length; index += 4) {
+      const [red, green, blue] = [data[index], data[index + 1], data[index + 2]];
+      if (red >= 60 && red <= 180 && green >= red + 10 && blue >= red + 10 && Math.abs(green - blue) < 20) {
+        count += 1;
+      }
+    }
+    return count;
+  });
+}
+
+test("the charcoal theme draws the analyzer in slate with no green or red", async ({ page }, testInfo) => {
+  await page.selectOption("#theme-select", "charcoal");
+  await mp3Row(page, "Encore").locator(".play-mp3").click();
+  await expect(page.locator("#player-audio")).toHaveCount(1);
+
+  await playTone(page);
+
+  await expect.poll(() => slatePixels(page), { timeout: 10_000 }).toBeGreaterThan(50);
+  expect(await barPixels(page)).toBe(0);
+
+  await page.locator(".queue-wrapper").screenshot({ path: testInfo.outputPath("charcoal-analyzer.png") });
+});
+
 test("the VIS button hides and shows the analyzer, and the choice is kept", async ({ page }) => {
   await expect(page.locator("#visualizer")).toBeVisible();
 

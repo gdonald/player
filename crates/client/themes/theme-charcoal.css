@@ -1,0 +1,575 @@
+/* Charcoal theme: dark slate windows, gradient title bars, pale blue-gray
+   text on black displays, slate spectrum bars, and silver buttons. */
+
+:root,
+[data-bs-theme="dark"] {
+  --ch-desktop: #101213;
+  --ch-face-top: #31373b;
+  --ch-face-bottom: #262b2e;
+  --ch-face-dark: #121213;
+  --ch-bevel-light: #3f454a;
+  --ch-bevel-dark: #08090a;
+  --ch-outline: #000;
+  --ch-title-text: #d3d4d7;
+  --ch-title: linear-gradient(
+    #bdbfc3 0,
+    #83868e 2px,
+    #646771 5px,
+    #424652 7px,
+    #313542 8px,
+    #343946 100%
+  );
+  --ch-lcd: #08090a;
+  --ch-lcd-edge: #1e2426;
+  --ch-display: #a2c1cc;
+  --ch-display-dim: #565c62;
+  --ch-list-text: #8ca7b1;
+  --ch-list-current: #bdbdbd;
+  --ch-select: #313540;
+  --ch-button-edge: #23282b;
+  --ch-button-text: #0e0e0e;
+  --ch-silver: linear-gradient(#f9f9f9, #dedede 25%, #c4c4c4 45%, #9e9e9e 60%, #b1b1b1 75%, #d2d2d2);
+  --ch-silver-hover: linear-gradient(#fff, #ececec 25%, #d6d6d6 45%, #b0b0b0 60%, #c2c2c2 75%, #e0e0e0);
+  --ch-silver-pressed: linear-gradient(#9e9e9e, #b1b1b1 40%, #c4c4c4 70%, #dedede);
+  --ch-gloss: linear-gradient(#fff, #eee 20%, #d4d4d4 45%, #a1a1a1 55%, #767676 75%, #5d5d5d 90%, #6c6c6c);
+  --ch-thumb: linear-gradient(#dedede, #d2d2d2 40%, #9e9e9e);
+  --ch-thumb-edge: #808080;
+  --ch-font: Tahoma, Verdana, "Segoe UI", Arial, sans-serif;
+  --ch-digits: "Courier New", Consolas, monospace;
+
+  --vis-background: var(--ch-lcd);
+  --vis-bar-low: #4a585d;
+  --vis-bar-mid: #5e6c71;
+  --vis-bar-high: #768489;
+  --vis-peak: var(--ch-display);
+  --vis-scanline: rgba(0, 0, 0, 0);
+
+  --bs-body-bg: var(--ch-desktop);
+  --bs-body-color: var(--ch-list-text);
+  --bs-body-font-family: var(--ch-font);
+  --bs-body-font-size: 13px;
+  --bs-border-color: var(--ch-bevel-dark);
+  --bs-secondary-color: var(--ch-display-dim);
+  --bs-link-color: var(--ch-display);
+  --bs-link-color-rgb: 162, 193, 204;
+  --bs-link-hover-color: var(--ch-list-current);
+  --bs-link-hover-color-rgb: 189, 189, 189;
+}
+
+body {
+  background: var(--ch-desktop);
+  font-family: var(--ch-font);
+}
+
+.border-dark {
+  border-color: var(--ch-bevel-dark) !important;
+}
+
+.error {
+  color: #d98a8a;
+  font-size: 12px;
+  font-style: italic;
+}
+
+/* Window frame and title bar */
+
+.winamp-window {
+  background: linear-gradient(var(--ch-face-top), var(--ch-face-top) 40px, var(--ch-face-bottom) 90px);
+  border: 1px solid var(--ch-outline);
+}
+
+.winamp-titlebar {
+  margin: 0;
+  border-bottom: 1px solid var(--ch-outline);
+  background: var(--ch-title);
+}
+
+.window-bar {
+  padding: 2px 4px;
+  border-bottom: 1px solid var(--ch-outline);
+  background: var(--ch-title);
+}
+
+.window-bar .winamp-titlebar {
+  border-bottom: none;
+  background: none;
+}
+
+.winamp-titlebar span {
+  color: var(--ch-title-text);
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 1px;
+  line-height: 13px;
+}
+
+.theme-select {
+  border: none;
+  border-right: 1px solid var(--ch-outline);
+  border-radius: 0;
+  background: var(--ch-title);
+  color: var(--ch-title-text);
+  font-family: var(--ch-font);
+  font-size: 9px;
+  font-weight: 700;
+}
+
+/* Silver buttons */
+
+.winamp-button,
+.winamp-select,
+.library-button,
+.btn,
+.btn-primary,
+.btn-outline-secondary {
+  border: 1px solid var(--ch-button-edge);
+  border-radius: 2px;
+  background: var(--ch-silver);
+  color: var(--ch-button-text);
+  font-family: var(--ch-font);
+  font-weight: 700;
+}
+
+.winamp-button {
+  font-size: 10px;
+  line-height: 1;
+}
+
+.winamp-button i {
+  font-size: 13px;
+}
+
+.player-transport .winamp-button {
+  background: var(--ch-gloss);
+}
+
+.winamp-button:hover:not(:disabled),
+.library-button:hover,
+.btn:hover {
+  border-color: var(--ch-button-edge);
+  background: var(--ch-silver-hover);
+  color: var(--ch-button-text);
+}
+
+.winamp-button:active:not(:disabled),
+.btn:active,
+.btn.show {
+  border-color: var(--ch-button-edge) !important;
+  background: var(--ch-silver-pressed) !important;
+  color: var(--ch-button-text) !important;
+}
+
+.winamp-button:disabled {
+  opacity: 0.45;
+}
+
+.winamp-light {
+  background: #252a2d;
+  box-shadow: inset 0 0 0 1px var(--ch-outline);
+}
+
+.winamp-lit .winamp-light {
+  background: var(--ch-display);
+  box-shadow: 0 0 4px var(--ch-display);
+}
+
+.winamp-select {
+  font-size: 10px;
+}
+
+/* Black displays with pale blue-gray text */
+
+.player-lcd,
+.player-marquee,
+.equalizer-curve,
+.visualizer-canvas {
+  background: var(--ch-lcd);
+  border: 1px solid;
+  border-color: var(--ch-lcd-edge) var(--ch-bevel-light) var(--ch-bevel-light) var(--ch-lcd-edge);
+}
+
+.player-state {
+  color: var(--ch-display);
+  font-size: 15px;
+}
+
+.player-clock {
+  color: var(--ch-display);
+  font-family: var(--ch-digits);
+  font-size: 30px;
+  font-weight: 700;
+  letter-spacing: 3px;
+  line-height: 1;
+}
+
+.player-marquee-text {
+  color: var(--ch-display);
+  font-size: 12px;
+  line-height: 18px;
+}
+
+.player-meta {
+  font-size: 10px;
+}
+
+.player-album {
+  color: var(--ch-display-dim);
+}
+
+.player-length {
+  background: var(--ch-lcd);
+  color: var(--ch-display);
+  font-family: var(--ch-digits);
+  font-weight: 700;
+}
+
+/* Sliders: dark grooves with silver thumbs */
+
+.winamp-seek,
+.winamp-volume {
+  border: 1px solid;
+  border-color: var(--ch-bevel-dark) var(--ch-bevel-light) var(--ch-bevel-light) var(--ch-bevel-dark);
+  border-radius: 2px;
+  background: linear-gradient(
+    to right,
+    #3a4047 var(--progress, 0%),
+    var(--ch-lcd) var(--progress, 0%)
+  );
+}
+
+.winamp-seek::-webkit-slider-thumb,
+.winamp-volume::-webkit-slider-thumb {
+  width: 28px;
+  height: 10px;
+  border: 1px solid var(--ch-thumb-edge);
+  border-radius: 2px;
+  background: var(--ch-thumb);
+  -webkit-appearance: none;
+  appearance: none;
+}
+
+.winamp-volume::-webkit-slider-thumb {
+  width: 14px;
+}
+
+.winamp-seek::-moz-range-thumb,
+.winamp-volume::-moz-range-thumb {
+  width: 28px;
+  height: 10px;
+  border: 1px solid var(--ch-thumb-edge);
+  border-radius: 2px;
+  background: var(--ch-thumb);
+}
+
+/* Equalizer window: black panel, thin grooves, silver thumbs */
+
+.equalizer-curve-zero {
+  stroke: #31373b;
+  stroke-width: 0.5;
+  stroke-dasharray: 2 2;
+}
+
+.equalizer-curve-line {
+  fill: none;
+  stroke: var(--ch-display);
+  stroke-width: 1.2;
+  vector-effect: non-scaling-stroke;
+}
+
+.equalizer-bands {
+  border: 1px solid;
+  border-color: var(--ch-bevel-dark) var(--ch-bevel-light) var(--ch-bevel-light) var(--ch-bevel-dark);
+  background: var(--ch-face-dark);
+}
+
+.equalizer-preamp {
+  border-right: 1px solid var(--ch-outline);
+}
+
+.equalizer-scale,
+.equalizer-frequency {
+  color: var(--ch-display-dim);
+  font-size: 8px;
+  font-weight: 700;
+}
+
+.equalizer-gain {
+  color: var(--ch-display);
+  font-family: var(--ch-digits);
+  font-size: 9px;
+  font-weight: 700;
+}
+
+.equalizer-slider {
+  border: none;
+  background: linear-gradient(
+    to right,
+    transparent 3px,
+    #252627 3px,
+    #252627 4px,
+    #000 4px,
+    #000 6px,
+    #252627 6px,
+    #252627 7px,
+    transparent 7px
+  );
+}
+
+.equalizer-slider::-webkit-slider-thumb {
+  width: 10px;
+  height: 8px;
+  border: 1px solid var(--ch-thumb-edge);
+  border-radius: 1px;
+  background: var(--ch-thumb);
+  -webkit-appearance: none;
+  appearance: none;
+}
+
+.equalizer-slider::-moz-range-thumb {
+  width: 10px;
+  height: 8px;
+  border: 1px solid var(--ch-thumb-edge);
+  border-radius: 1px;
+  background: var(--ch-thumb);
+}
+
+/* Playlist window (the queue) */
+
+.playlist-list {
+  border: 1px solid;
+  border-color: var(--ch-lcd-edge) var(--ch-bevel-light) var(--ch-bevel-light) var(--ch-lcd-edge);
+  background: var(--ch-lcd);
+}
+
+.playlist-table {
+  font-family: Arial, var(--ch-font);
+  font-size: 12px;
+}
+
+.playlist-row td {
+  color: var(--ch-list-text);
+}
+
+.playlist-row.table-primary td {
+  color: var(--ch-list-current);
+}
+
+.playlist-row:hover td {
+  background: var(--ch-select);
+}
+
+.playlist-remove a {
+  color: var(--ch-display-dim);
+  font-size: 10px;
+}
+
+.playlist-row:hover .playlist-remove a {
+  color: var(--ch-list-current);
+}
+
+.playlist-mode.winamp-lit,
+.library-button.winamp-lit {
+  background: var(--ch-silver-pressed);
+}
+
+.playlist-mode.winamp-lit i,
+.library-button.winamp-lit i {
+  color: #2f4a55;
+  text-shadow: 0 0 3px rgba(162, 193, 204, 0.9);
+}
+
+.playlist-total {
+  background: var(--ch-lcd);
+  color: var(--ch-display);
+  font-family: var(--ch-digits);
+  font-size: 11px;
+  font-weight: 700;
+}
+
+/* Library window */
+
+.library-button {
+  font-size: 10.5px;
+}
+
+.library-button i {
+  font-size: 13px;
+}
+
+.library-count {
+  background: var(--ch-lcd);
+  color: var(--ch-display);
+  font-family: var(--ch-digits);
+  font-size: 10px;
+  line-height: 14px;
+}
+
+/* Library pages */
+
+.breadcrumb,
+.breadcrumb a {
+  color: var(--ch-title-text);
+  font-size: 12px;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+}
+
+.breadcrumb-item + .breadcrumb-item::before {
+  color: var(--ch-display-dim);
+}
+
+.breadcrumb-item.active,
+.breadcrumb-item[aria-current] {
+  color: var(--ch-title-text);
+}
+
+.table {
+  --bs-table-bg: var(--ch-lcd);
+  --bs-table-color: var(--ch-list-text);
+  --bs-table-striped-bg: var(--ch-lcd);
+  --bs-table-striped-color: var(--ch-list-text);
+  --bs-table-hover-bg: var(--ch-select);
+  --bs-table-hover-color: var(--ch-list-current);
+  --bs-table-border-color: #161a1c;
+  border: 1px solid;
+  border-color: var(--ch-lcd-edge) var(--ch-bevel-light) var(--ch-bevel-light) var(--ch-lcd-edge);
+  font-size: 12px;
+}
+
+.table > thead th {
+  background: var(--ch-title);
+  color: var(--ch-title-text);
+  font-size: 11px;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+}
+
+.table a {
+  color: inherit;
+}
+
+.table > thead a {
+  color: var(--ch-title-text);
+}
+
+.table > tbody > tr:hover a {
+  color: var(--ch-list-current);
+}
+
+.btn,
+.btn-primary,
+.btn-outline-secondary {
+  --bs-btn-color: var(--ch-button-text);
+  --bs-btn-hover-color: var(--ch-button-text);
+  --bs-btn-active-color: var(--ch-button-text);
+  --bs-btn-disabled-color: var(--ch-button-text);
+  font-size: 11px;
+}
+
+.btn-sm {
+  font-size: 10px;
+}
+
+.form-control,
+.form-select {
+  border: 1px solid;
+  border-color: var(--ch-lcd-edge) var(--ch-bevel-light) var(--ch-bevel-light) var(--ch-lcd-edge);
+  border-radius: 0;
+  background-color: var(--ch-lcd);
+  color: var(--ch-display);
+  font-size: 12px;
+}
+
+.form-control::placeholder {
+  color: var(--ch-display-dim);
+}
+
+.form-control:focus,
+.form-select:focus {
+  border-color: var(--ch-display-dim);
+  background-color: var(--ch-lcd);
+  box-shadow: none;
+  color: var(--ch-display);
+}
+
+.form-label {
+  color: var(--ch-title-text);
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.form-check-input {
+  border-radius: 0;
+  background-color: var(--ch-lcd);
+  border-color: var(--ch-bevel-light);
+}
+
+.form-check-input:checked {
+  background-color: var(--ch-select);
+  border-color: var(--ch-display-dim);
+}
+
+.dropdown-menu {
+  --bs-dropdown-bg: var(--ch-face-bottom);
+  --bs-dropdown-border-color: var(--ch-outline);
+  --bs-dropdown-link-color: var(--ch-list-text);
+  --bs-dropdown-link-hover-bg: var(--ch-select);
+  --bs-dropdown-link-hover-color: var(--ch-list-current);
+  border-radius: 0;
+  font-size: 12px;
+}
+
+.alert {
+  --bs-alert-bg: var(--ch-lcd);
+  --bs-alert-color: var(--ch-display);
+  --bs-alert-border-color: var(--ch-bevel-light);
+  border-radius: 0;
+  font-size: 12px;
+}
+
+.alert .btn-close {
+  filter: invert(1) grayscale(1) brightness(1.5);
+}
+
+p.text-center {
+  color: var(--ch-list-text);
+}
+
+/* Request spinner */
+
+.waiting div {
+  border: 1px solid var(--ch-display);
+}
+
+/* Playlist entry drag handles and drop markers */
+
+.drag-handle {
+  color: var(--ch-display-dim);
+}
+
+.drag-handle:hover {
+  color: var(--ch-display);
+}
+
+#playlist-mp3s tr.drop-above td {
+  box-shadow:
+    inset 0 2px 0 var(--ch-display),
+    inset 0 0 0 9999px var(--bs-table-bg-state, var(--bs-table-bg-type, var(--bs-table-accent-bg)));
+}
+
+#playlist-mp3s tr.drop-below td {
+  box-shadow:
+    inset 0 -2px 0 var(--ch-display),
+    inset 0 0 0 9999px var(--bs-table-bg-state, var(--bs-table-bg-type, var(--bs-table-accent-bg)));
+}
+
+@media (max-width: 767.98px) {
+  .area-content {
+    border: 1px solid var(--ch-outline);
+  }
+
+  .player-clock {
+    font-size: 24px;
+  }
+}

@@ -34,6 +34,35 @@ test("enqueuing a song starts playing it", async ({ page }) => {
   await expect(page).toHaveTitle("Other Band: Encore");
 });
 
+test("the clear button is disabled while the playlist is empty", async ({ page }) => {
+  await expect(page.locator("#queue-clear")).toBeDisabled();
+});
+
+test("clear empties the playlist and stops playback", async ({ page }) => {
+  await enqueue(page, "Encore");
+  await enqueue(page, "Opening Song");
+  await expect(currentQueueRow(page)).toContainText("Encore");
+
+  await page.click("#queue-clear");
+
+  await expect.poll(() => queueTitles(page)).toEqual([]);
+  await expect(page.locator("#player-title")).toHaveText("Nothing playing");
+  await expect(page).toHaveTitle("Player");
+  await expect(page.locator("#queue-clear")).toBeDisabled();
+  expect(await sql("SELECT 1 FROM queued_mp3s")).toHaveLength(0);
+});
+
+test("a cleared playlist stays empty after a reload", async ({ page }) => {
+  await enqueue(page, "Encore");
+  await page.click("#queue-clear");
+  await expect.poll(() => queueTitles(page)).toEqual([]);
+
+  await page.reload();
+
+  await expect(page.locator(".library-nav")).toBeVisible();
+  await expect.poll(() => queueTitles(page)).toEqual([]);
+});
+
 test("a second song waits in the queue", async ({ page }) => {
   await enqueue(page, "Encore");
   await enqueue(page, "Opening Song");

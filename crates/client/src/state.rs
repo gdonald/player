@@ -262,6 +262,17 @@ impl Ctx {
         self.apply(queue::skip(&self.queue_ids(), self.current_id(), mode));
     }
 
+    /// Empties the queue and stops playback.
+    pub fn clear_queue(&self) {
+        self.play(None);
+
+        let ctx = *self;
+        spawn_local(async move {
+            let _waiting = ctx.wait();
+            ctx.apply_queue(api::delete("/api/queued_mp3s").await);
+        });
+    }
+
     /// Removes the entry from the queue and nothing more. Removing the
     /// playing entry stops playback.
     pub fn remove(&self, id: i64) {

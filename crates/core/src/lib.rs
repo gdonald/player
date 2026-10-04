@@ -9,4 +9,5 @@ pub mod search;
 pub mod selection;
 pub mod sort;
 pub mod spectrum;
+pub mod theme;
 pub mod title;

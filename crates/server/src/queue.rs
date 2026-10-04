@@ -63,6 +63,18 @@ pub async fn append(pool: &PgPool, mp3_id: Option<i64>) -> AppResult<()> {
     Ok(())
 }
 
+/// Removes every entry.
+pub async fn clear(pool: &PgPool) -> sqlx::Result<()> {
+    let mut transaction = pool.begin().await?;
+    lock(&mut transaction).await?;
+
+    sqlx::query("DELETE FROM queued_mp3s")
+        .execute(&mut *transaction)
+        .await?;
+
+    transaction.commit().await
+}
+
 /// Removes the entry when present and closes the gap it leaves.
 pub async fn remove(pool: &PgPool, id: i64) -> sqlx::Result<()> {
     let mut transaction = pool.begin().await?;

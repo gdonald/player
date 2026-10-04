@@ -58,7 +58,9 @@ pub fn api(state: AppState) -> Router<AppState> {
         )
         .route(
             "/queued_mp3s",
-            get(queued_mp3s_index).post(queued_mp3s_create),
+            get(queued_mp3s_index)
+                .post(queued_mp3s_create)
+                .delete(queued_mp3s_clear),
         )
         .route(
             "/queued_mp3s/{id}",
@@ -324,6 +326,12 @@ async fn playlist_mp3s_destroy(
 }
 
 async fn queued_mp3s_index(State(state): State<AppState>) -> AppResult<Json<QueuedMp3sResponse>> {
+    queued_list(&state).await
+}
+
+async fn queued_mp3s_clear(State(state): State<AppState>) -> AppResult<Json<QueuedMp3sResponse>> {
+    queue::clear(&state.pool).await?;
+
     queued_list(&state).await
 }
 

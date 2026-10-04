@@ -13,6 +13,7 @@ mod playlists;
 mod sources;
 mod state;
 mod storage;
+mod theme;
 mod visualizer;
 
 fn main() {

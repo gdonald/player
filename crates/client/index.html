@@ -8,6 +8,16 @@
     <link rel="stylesheet" href="/vendor/bootstrap.min.css" />
     <link rel="stylesheet" href="/vendor/bootstrap-icons.min.css" />
     <link data-trunk rel="css" href="assets/app.css" />
+    <link data-trunk rel="copy-dir" href="themes" />
+    <link id="theme" rel="stylesheet" href="/themes/theme-default.css" />
+    <script>
+      try {
+        var storedTheme = localStorage.getItem("player.theme");
+        if (storedTheme && /^[a-z0-9-]+$/.test(storedTheme)) {
+          document.getElementById("theme").href = "/themes/theme-" + storedTheme + ".css";
+        }
+      } catch (error) {}
+    </script>
     <link data-trunk rel="copy-file" href="assets/favicon.ico" />
     <link data-trunk rel="copy-file" href="assets/favicon.png" />
     <link data-trunk rel="copy-file" href="assets/robots.txt" />

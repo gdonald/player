@@ -96,6 +96,30 @@ async fn create_rejects_a_non_numeric_id(pool: PgPool) {
 }
 
 #[sqlx::test]
+async fn clear_empties_the_queue(pool: PgPool) {
+    let (mut app, ids) = with_mp3s(pool).await;
+    for id in &ids {
+        enqueue(&mut app, json!(id)).await;
+    }
+
+    let (status, body) = app.send(Method::DELETE, "/api/queued_mp3s", None).await;
+
+    assert_eq!(status, StatusCode::OK);
+    assert_eq!(body, json!({"queued_mp3s": []}));
+}
+
+#[sqlx::test]
+async fn enqueuing_after_a_clear_starts_at_position_one(pool: PgPool) {
+    let (mut app, ids) = with_mp3s(pool).await;
+    enqueue(&mut app, json!(ids[0])).await;
+    app.send(Method::DELETE, "/api/queued_mp3s", None).await;
+
+    let (_, body) = enqueue(&mut app, json!(ids[1])).await;
+
+    assert_eq!(positions(&body), vec![1]);
+}
+
+#[sqlx::test]
 async fn destroy_closes_the_gap(pool: PgPool) {
     let (mut app, ids) = with_mp3s(pool).await;
     for id in &ids {

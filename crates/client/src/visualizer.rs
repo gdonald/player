@@ -13,7 +13,6 @@ const OPEN_KEY: &str = "player.visualizer.open";
 const FRAME: Duration = Duration::from_millis(33);
 const GAP: f64 = 2.0;
 const PEAK_HEIGHT: f64 = 2.0;
-const SCANLINE_SPACING: f64 = 3.0;
 
 /// Shown unless it was hidden before.
 fn stored_open() -> bool {
@@ -22,6 +21,41 @@ fn stored_open() -> bool {
 
 fn store_open(open: bool) {
     storage::set(OPEN_KEY, &open.to_string());
+}
+
+/// The analyzer colors, read from the theme's `--vis-*` custom properties.
+struct Palette {
+    background: String,
+    bar_low: String,
+    bar_mid: String,
+    bar_high: String,
+    peak: String,
+    scanline: String,
+    scanline_spacing: f64,
+}
+
+impl Palette {
+    fn read(canvas: &web_sys::HtmlCanvasElement) -> Self {
+        let style = window().get_computed_style(canvas).ok().flatten();
+        let color = |property: &str, fallback: &str| {
+            style
+                .as_ref()
+                .and_then(|style| style.get_property_value(property).ok())
+                .map(|value| value.trim().to_string())
+                .filter(|value| !value.is_empty())
+                .unwrap_or_else(|| fallback.to_string())
+        };
+
+        Palette {
+            background: color("--vis-background", "#000"),
+            bar_low: color("--vis-bar-low", "#00b000"),
+            bar_mid: color("--vis-bar-mid", "#e0e000"),
+            bar_high: color("--vis-bar-high", "#e83000"),
+            peak: color("--vis-peak", "#c8c8d8"),
+            scanline: color("--vis-scanline", "rgba(0, 0, 0, 0.35)"),
+            scanline_spacing: spectrum::scanline_spacing(&color("--vis-scanline-spacing", "")),
+        }
+    }
 }
 
 fn draw(canvas: &web_sys::HtmlCanvasElement, levels: &[f32], peaks: &[f32]) {
@@ -49,13 +83,15 @@ fn draw(canvas: &web_sys::HtmlCanvasElement, levels: &[f32], peaks: &[f32]) {
         return;
     };
 
-    context.set_fill_style_str("#000");
+    let palette = Palette::read(canvas);
+
+    context.set_fill_style_str(&palette.background);
     context.fill_rect(0.0, 0.0, width, height);
 
     let gradient = context.create_linear_gradient(0.0, height, 0.0, 0.0);
-    gradient.add_color_stop(0.0, "#00b000").ok();
-    gradient.add_color_stop(0.55, "#e0e000").ok();
-    gradient.add_color_stop(1.0, "#e83000").ok();
+    gradient.add_color_stop(0.0, &palette.bar_low).ok();
+    gradient.add_color_stop(0.55, &palette.bar_mid).ok();
+    gradient.add_color_stop(1.0, &palette.bar_high).ok();
 
     #[allow(clippy::cast_precision_loss, reason = "bar counts are small")]
     let count = levels.len().max(1) as f64;
@@ -71,7 +107,7 @@ fn draw(canvas: &web_sys::HtmlCanvasElement, levels: &[f32], peaks: &[f32]) {
         context.fill_rect(x, height - bar_height, bar_width, bar_height);
 
         let peak_y = height - f64::from(*peak) * height;
-        context.set_fill_style_str("#c8c8d8");
+        context.set_fill_style_str(&palette.peak);
         context.fill_rect(
             x,
             (peak_y - PEAK_HEIGHT * ratio).max(0.0),
@@ -80,11 +116,11 @@ fn draw(canvas: &web_sys::HtmlCanvasElement, levels: &[f32], peaks: &[f32]) {
         );
     }
 
-    context.set_fill_style_str("rgba(0, 0, 0, 0.35)");
+    context.set_fill_style_str(&palette.scanline);
     let mut y = 0.0;
     while y < height {
         context.fill_rect(0.0, y, width, ratio);
-        y += SCANLINE_SPACING * ratio;
+        y += palette.scanline_spacing * ratio;
     }
 }
 
