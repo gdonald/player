@@ -180,22 +180,21 @@ pub fn Mp3s() -> impl IntoView {
                             </tr>
                         </thead>
                         <tbody>
-                            {move || {
-                                mp3s.get()
-                                    .into_iter()
-                                    .map(|mp3| {
-                                        view! {
-                                            <Mp3Row
-                                                mp3=mp3
-                                                selected=selected
-                                                playlists=playlists
-                                                open_menu=open_menu
-                                                search=search
-                                            />
-                                        }
-                                    })
-                                    .collect_view()
-                            }}
+                            <For
+                                each=move || mp3s.get()
+                                key=Mp3::clone
+                                children=move |mp3| {
+                                    view! {
+                                        <Mp3Row
+                                            mp3=mp3
+                                            selected=selected
+                                            playlists=playlists
+                                            open_menu=open_menu
+                                            search=search
+                                        />
+                                    }
+                                }
+                            />
                         </tbody>
                     </table>
                 </Show>
@@ -231,6 +230,8 @@ fn Mp3Row(
     };
 
     let id = mp3.id;
+    let menu_open = Memo::new(move |_| open_menu.get() == Some(id));
+
     let album = mp3.album_name.clone();
     let artist = mp3.artist_name.clone();
 
@@ -288,13 +289,13 @@ fn Mp3Row(
                             <button
                                 type="button"
                                 class=move || {
-                                    if open_menu.get() == Some(id) {
+                                    if menu_open.get() {
                                         "btn btn-sm btn-primary dropdown-toggle show"
                                     } else {
                                         "btn btn-sm btn-primary dropdown-toggle"
                                     }
                                 }
-                                aria-expanded=move || (open_menu.get() == Some(id)).to_string()
+                                aria-expanded=move || menu_open.get().to_string()
                                 on:click=move |event: MouseEvent| {
                                     event.stop_propagation();
                                     open_menu.update(|open| {
@@ -304,36 +305,33 @@ fn Mp3Row(
                             >
                                 "Add to Playlist"
                             </button>
-                            <ul
-                                class=move || {
-                                    if open_menu.get() == Some(id) { "dropdown-menu show" } else { "dropdown-menu" }
-                                }
-                                data-bs-popper="static"
-                            >
-                                {move || {
-                                    playlists
-                                        .get()
-                                        .into_iter()
-                                        .map(|playlist| {
-                                            let playlist_id = playlist.id;
-                                            view! {
-                                                <li>
-                                                    <a
-                                                        class="dropdown-item"
-                                                        href="#"
-                                                        on:click=move |event: MouseEvent| {
-                                                            event.prevent_default();
-                                                            add_to_playlist(playlist_id, id);
-                                                        }
-                                                    >
-                                                        {playlist.name}
-                                                    </a>
-                                                </li>
-                                            }
-                                        })
-                                        .collect_view()
-                                }}
-                            </ul>
+                            <Show when=move || menu_open.get()>
+                                <ul class="dropdown-menu show" data-bs-popper="static">
+                                    {move || {
+                                        playlists
+                                            .get()
+                                            .into_iter()
+                                            .map(|playlist| {
+                                                let playlist_id = playlist.id;
+                                                view! {
+                                                    <li>
+                                                        <a
+                                                            class="dropdown-item"
+                                                            href="#"
+                                                            on:click=move |event: MouseEvent| {
+                                                                event.prevent_default();
+                                                                add_to_playlist(playlist_id, id);
+                                                            }
+                                                        >
+                                                            {playlist.name}
+                                                        </a>
+                                                    </li>
+                                                }
+                                            })
+                                            .collect_view()
+                                    }}
+                                </ul>
+                            </Show>
                         </div>
                     </Show>
                     <button

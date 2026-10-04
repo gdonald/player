@@ -326,7 +326,7 @@ pub fn Player() -> impl IntoView {
                     <div class="player-meta">
                         <span class="player-album" id="player-byline">{album}</span>
                         <span class="player-length" id="player-duration">
-                            {move || playback::format_time(duration.get())}
+                            {move || playback::format_time(playback::remaining(position.get(), duration.get()))}
                         </span>
                     </div>
                 </div>

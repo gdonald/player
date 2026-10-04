@@ -483,7 +483,38 @@ async fn entries_of_a_missing_playlist_are_404(pool: PgPool) {
 }
 
 #[sqlx::test]
-async fn move_higher_and_lower_swap_neighbors_and_update_the_end_flags(pool: PgPool) {
+async fn move_to_places_the_entry_at_the_position_and_updates_the_end_flags(pool: PgPool) {
+    let mut library = library(pool).await;
+    let id = create(
+        &mut library.app,
+        "Mix",
+        &[library.first, library.second, library.third],
+    )
+    .await;
+    let listed = entries(&mut library.app, id).await;
+    let one = entry_id(&listed, "One");
+
+    let (_, body) = library
+        .app
+        .send(
+            Method::POST,
+            &format!("/api/playlists/{id}/playlist_mp3s/{one}/move_to"),
+            Some(json!({"playlist_mp3": {"position": 1}})),
+        )
+        .await;
+
+    assert_eq!(
+        flags(&body),
+        vec![
+            ("One".to_string(), true, false),
+            ("Three".to_string(), false, false),
+            ("Two".to_string(), false, true)
+        ]
+    );
+}
+
+#[sqlx::test]
+async fn move_to_renumbers_positions_from_one(pool: PgPool) {
     let mut library = library(pool).await;
     let id = create(
         &mut library.app,
@@ -493,73 +524,29 @@ async fn move_higher_and_lower_swap_neighbors_and_update_the_end_flags(pool: PgP
     .await;
     let listed = entries(&mut library.app, id).await;
     let three = entry_id(&listed, "Three");
-    let one = entry_id(&listed, "One");
 
-    let (_, higher) = library
+    library
         .app
         .send(
             Method::POST,
-            &format!("/api/playlists/{id}/playlist_mp3s/{three}/move_higher"),
-            None,
+            &format!("/api/playlists/{id}/playlist_mp3s/{three}/move_to"),
+            Some(json!({"position": 3})),
         )
         .await;
 
-    assert_eq!(
-        flags(&higher),
-        vec![
-            ("Three".to_string(), true, false),
-            ("Two".to_string(), false, false),
-            ("One".to_string(), false, true)
-        ]
-    );
+    let positions: Vec<i32> = sqlx::query_scalar(
+        "SELECT position FROM playlist_mp3s WHERE playlist_id = $1 ORDER BY position",
+    )
+    .bind(id)
+    .fetch_all(library.app.pool())
+    .await
+    .unwrap();
 
-    let (_, lower) = library
-        .app
-        .send(
-            Method::POST,
-            &format!("/api/playlists/{id}/playlist_mp3s/{three}/move_lower"),
-            None,
-        )
-        .await;
-
-    assert_eq!(titles(&lower, "playlist_mp3s"), vec!["Two", "Three", "One"]);
-
-    let (_, unchanged) = library
-        .app
-        .send(
-            Method::POST,
-            &format!("/api/playlists/{id}/playlist_mp3s/{one}/move_lower"),
-            None,
-        )
-        .await;
-
-    assert_eq!(
-        titles(&unchanged, "playlist_mp3s"),
-        vec!["Two", "Three", "One"]
-    );
+    assert_eq!(positions, vec![1, 2, 3]);
 }
 
 #[sqlx::test]
-async fn moving_the_first_entry_higher_changes_nothing(pool: PgPool) {
-    let mut library = library(pool).await;
-    let id = create(&mut library.app, "Mix", &[library.first, library.second]).await;
-    let listed = entries(&mut library.app, id).await;
-    let two = entry_id(&listed, "Two");
-
-    let (_, body) = library
-        .app
-        .send(
-            Method::POST,
-            &format!("/api/playlists/{id}/playlist_mp3s/{two}/move_higher"),
-            None,
-        )
-        .await;
-
-    assert_eq!(titles(&body, "playlist_mp3s"), vec!["Two", "One"]);
-}
-
-#[sqlx::test]
-async fn entry_of_another_playlist_is_404(pool: PgPool) {
+async fn move_to_for_an_entry_of_another_playlist_is_404(pool: PgPool) {
     let mut library = library(pool).await;
     let mix = create(&mut library.app, "Mix", &[library.first]).await;
     let other = create(&mut library.app, "Other", &[]).await;
@@ -570,8 +557,8 @@ async fn entry_of_another_playlist_is_404(pool: PgPool) {
         .app
         .send(
             Method::POST,
-            &format!("/api/playlists/{other}/playlist_mp3s/{one}/move_lower"),
-            None,
+            &format!("/api/playlists/{other}/playlist_mp3s/{one}/move_to"),
+            Some(json!({"position": 1})),
         )
         .await;
 

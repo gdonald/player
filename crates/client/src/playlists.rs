@@ -1,12 +1,13 @@
-use leptos::ev::MouseEvent;
+use leptos::ev::{DragEvent, MouseEvent};
 use leptos::prelude::*;
 use leptos::task::spawn_local;
-use player_core::paths;
+use player_core::{paths, reorder};
 use player_types::{
-    FieldErrors, MessageResponse, PlaylistListItem, PlaylistMp3, PlaylistMp3sResponse,
-    PlaylistParams, PlaylistResponse, PlaylistSummary, PlaylistsResponse, wrap,
+    FieldErrors, MessageResponse, PlaylistListItem, PlaylistMp3, PlaylistMp3MoveParams,
+    PlaylistMp3sResponse, PlaylistParams, PlaylistResponse, PlaylistSummary, PlaylistsResponse,
+    wrap,
 };
-use serde_json::json;
+use wasm_bindgen::JsCast;
 
 use crate::api::{self, errors_for};
 use crate::state::{Page, ctx};
@@ -239,17 +240,53 @@ fn PlaylistMp3s(id: i64, entries: RwSignal<Vec<PlaylistMp3>>) -> impl IntoView {
         apply(api::get(&format!("/api/playlists/{id}/playlist_mp3s")).await);
     });
 
-    let act = move |entry_id: i64, action: &'static str| {
+    let remove = move |entry_id: i64| {
         spawn_local(async move {
             let _waiting = ctx.wait();
-            let path = format!("/api/playlists/{id}/playlist_mp3s/{entry_id}");
-            let result = if action == "delete" {
-                api::delete(&path).await
-            } else {
-                api::post(&format!("{path}/{action}"), &json!({})).await
-            };
-            apply(result);
+            apply(api::delete(&format!("/api/playlists/{id}/playlist_mp3s/{entry_id}")).await);
         });
+    };
+
+    let dragged = RwSignal::new(None::<i64>);
+    let drop_target = RwSignal::new(None::<i64>);
+
+    let entry_ids = move || {
+        entries.with_untracked(|list| list.iter().map(|entry| entry.id).collect::<Vec<_>>())
+    };
+
+    let end_drag = move || {
+        dragged.set(None);
+        drop_target.set(None);
+    };
+
+    let drop_on = move |target_id: i64| {
+        let moving = dragged.get_untracked();
+        end_drag();
+
+        let Some(moving_id) = moving.filter(|moving_id| *moving_id != target_id) else {
+            return;
+        };
+        let Some(position) = reorder::drop_position(&entry_ids(), target_id) else {
+            return;
+        };
+
+        spawn_local(async move {
+            let _waiting = ctx.wait();
+            let path = format!("/api/playlists/{id}/playlist_mp3s/{moving_id}/move_to");
+            apply(api::post(&path, &wrap(&PlaylistMp3MoveParams { position })).await);
+        });
+    };
+
+    let row_class = move |entry_id: i64| {
+        let edge = dragged
+            .get()
+            .filter(|_| drop_target.get() == Some(entry_id))
+            .and_then(|moving_id| reorder::drop_edge(&entry_ids(), moving_id, entry_id));
+
+        match edge {
+            Some(edge) => format!("align-middle {}", edge.class()),
+            None => "align-middle".to_string(),
+        }
     };
 
     let filter_by = move |field: &'static str, value: String| {
@@ -264,7 +301,46 @@ fn PlaylistMp3s(id: i64, entries: RwSignal<Vec<PlaylistMp3>>) -> impl IntoView {
         let artist = entry.mp3.artist_name.clone();
 
         view! {
-            <tr class="align-middle" id=format!("entry-{entry_id}")>
+            <tr
+                class=move || row_class(entry_id)
+                id=format!("entry-{entry_id}")
+                on:dragover=move |event: DragEvent| {
+                    if dragged.get_untracked().is_some() {
+                        event.prevent_default();
+                        drop_target.set(Some(entry_id));
+                    }
+                }
+                on:drop=move |event: DragEvent| {
+                    event.prevent_default();
+                    drop_on(entry_id);
+                }
+            >
+                <td class="tight">
+                    <span
+                        class="drag-handle"
+                        draggable="true"
+                        title="Drag to reorder"
+                        aria-label="Drag to reorder"
+                        on:dragstart=move |event: DragEvent| {
+                            if let Some(transfer) = event.data_transfer() {
+                                transfer.set_effect_allowed("move");
+                                transfer.set_data("text/plain", &entry_id.to_string()).ok();
+
+                                let row = event
+                                    .target()
+                                    .and_then(|target| target.dyn_into::<web_sys::Element>().ok())
+                                    .and_then(|handle| handle.closest("tr").ok().flatten());
+                                if let Some(row) = row {
+                                    transfer.set_drag_image(&row, 16, 16);
+                                }
+                            }
+                            dragged.set(Some(entry_id));
+                        }
+                        on:dragend=move |_: DragEvent| end_drag()
+                    >
+                        <i class="bi-grip-vertical"></i>
+                    </span>
+                </td>
                 <td>
                     <a
                         href="#"
@@ -303,40 +379,16 @@ fn PlaylistMp3s(id: i64, entries: RwSignal<Vec<PlaylistMp3>>) -> impl IntoView {
                     </a>
                 </td>
                 <td class="tight">
-                    <div class="btn-group" role="group" aria-label="Playlist MP3 actions">
-                        <div class="btn-group" role="group">
-                            <button
-                                type="button"
-                                class=if entry.first { "btn btn-sm btn-primary move-up disabled" } else { "btn btn-sm btn-primary move-up" }
-                                on:click=move |event: MouseEvent| {
-                                    event.prevent_default();
-                                    act(entry_id, "move_higher");
-                                }
-                            >
-                                "Up"
-                            </button>
-                            <button
-                                type="button"
-                                class=if entry.last { "btn btn-sm btn-primary move-down disabled" } else { "btn btn-sm btn-primary move-down" }
-                                on:click=move |event: MouseEvent| {
-                                    event.prevent_default();
-                                    act(entry_id, "move_lower");
-                                }
-                            >
-                                "Down"
-                            </button>
-                            <button
-                                type="button"
-                                class="btn btn-sm btn-primary delete-entry"
-                                on:click=move |event: MouseEvent| {
-                                    event.prevent_default();
-                                    act(entry_id, "delete");
-                                }
-                            >
-                                "Delete"
-                            </button>
-                        </div>
-                    </div>
+                    <button
+                        type="button"
+                        class="btn btn-sm btn-primary delete-entry"
+                        on:click=move |event: MouseEvent| {
+                            event.prevent_default();
+                            remove(entry_id);
+                        }
+                    >
+                        "Delete"
+                    </button>
                 </td>
             </tr>
         }
@@ -347,6 +399,7 @@ fn PlaylistMp3s(id: i64, entries: RwSignal<Vec<PlaylistMp3>>) -> impl IntoView {
             <table class="table table-striped table-hover" id="playlist-mp3s">
                 <thead>
                     <tr>
+                        <th class="tight"></th>
                         <th>"Title"</th>
                         <th class="col-album">"Album"</th>
                         <th class="text-center col-track">"Track"</th>

@@ -47,7 +47,7 @@ impl<'de> Deserialize<'de> for FlexId {
     }
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub struct Mp3 {
     pub id: i64,
     pub title: String,
@@ -147,6 +147,15 @@ pub struct PlaylistMp3 {
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct PlaylistMp3sResponse {
     pub playlist_mp3s: Vec<PlaylistMp3>,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+pub struct PlaylistMp3MoveParams {
+    pub position: i64,
+}
+
+impl Wrapped for PlaylistMp3MoveParams {
+    const KEY: &'static str = "playlist_mp3";
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -307,6 +316,14 @@ mod tests {
     #[test]
     fn flex_id_serializes_as_a_number() {
         assert_eq!(serde_json::to_value(FlexId(Some(4))).unwrap(), json!(4));
+    }
+
+    #[test]
+    fn move_params_wrap_in_the_playlist_mp3_key() {
+        assert_eq!(
+            wrap(&PlaylistMp3MoveParams { position: 3 }),
+            json!({"playlist_mp3": {"position": 3}})
+        );
     }
 
     #[test]

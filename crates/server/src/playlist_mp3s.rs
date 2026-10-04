@@ -1,14 +1,9 @@
+use player_core::reorder;
 use player_types::{Mp3, PlaylistMp3};
 use sqlx::PgPool;
 
 use crate::error::{AppError, AppResult};
 use crate::mp3s::{self, Mp3Row};
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum Move {
-    Higher,
-    Lower,
-}
 
 #[derive(Debug, sqlx::FromRow)]
 struct EntryRow {
@@ -59,47 +54,36 @@ async fn entry_position(pool: &PgPool, playlist_id: i64, entry_id: i64) -> AppRe
         .ok_or(AppError::NotFound)
 }
 
-/// Swaps the entry with its neighbor. At either end it does nothing.
-pub async fn move_entry(
+/// Moves the entry to the 1-based position in the playlist, shifting the
+/// entries between, and renumbers the playlist from 1.
+pub async fn move_to(
     pool: &PgPool,
     playlist_id: i64,
     entry_id: i64,
-    direction: Move,
+    position: i64,
 ) -> AppResult<()> {
-    let position = entry_position(pool, playlist_id, entry_id).await?;
-
-    let neighbor_query = match direction {
-        Move::Higher => {
-            "SELECT id, position FROM playlist_mp3s WHERE playlist_id = $1 AND position < $2 \
-             ORDER BY position DESC LIMIT 1"
-        }
-        Move::Lower => {
-            "SELECT id, position FROM playlist_mp3s WHERE playlist_id = $1 AND position > $2 \
-             ORDER BY position ASC LIMIT 1"
-        }
-    };
-
-    let neighbor: Option<(i64, i32)> = sqlx::query_as(neighbor_query)
-        .bind(playlist_id)
-        .bind(position)
-        .fetch_optional(pool)
-        .await?;
-
-    let Some((neighbor_id, neighbor_position)) = neighbor else {
-        return Ok(());
-    };
+    entry_position(pool, playlist_id, entry_id).await?;
 
     let mut transaction = pool.begin().await?;
 
-    for (id, new_position) in [(entry_id, neighbor_position), (neighbor_id, position)] {
-        sqlx::query(
-            "UPDATE playlist_mp3s SET position = $1, updated_at = CURRENT_TIMESTAMP WHERE id = $2",
-        )
-        .bind(new_position)
-        .bind(id)
-        .execute(&mut *transaction)
-        .await?;
-    }
+    let ids: Vec<i64> = sqlx::query_scalar(
+        "SELECT id FROM playlist_mp3s WHERE playlist_id = $1 ORDER BY position, id FOR UPDATE",
+    )
+    .bind(playlist_id)
+    .fetch_all(&mut *transaction)
+    .await?;
+
+    let reordered = reorder::move_to(&ids, entry_id, position);
+
+    sqlx::query(
+        "UPDATE playlist_mp3s pm SET position = ordered.position::int, \
+         updated_at = CURRENT_TIMESTAMP \
+         FROM unnest($1::bigint[]) WITH ORDINALITY AS ordered(id, position) \
+         WHERE pm.id = ordered.id",
+    )
+    .bind(&reordered)
+    .execute(&mut *transaction)
+    .await?;
 
     transaction.commit().await?;
 

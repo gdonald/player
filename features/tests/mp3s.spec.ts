@@ -136,6 +136,23 @@ test("a row's playlist menu adds that song", async ({ page }) => {
   expect(rows).toHaveLength(1);
 });
 
+test("playlist menu items exist only for the open row", async ({ page }) => {
+  await expect(page.locator("#mp3s .dropdown-item")).toHaveCount(0);
+
+  await mp3Row(page, "Encore").getByRole("button", { name: "Add to Playlist" }).click();
+
+  await expect(page.locator("#mp3s .dropdown-menu")).toHaveCount(1);
+});
+
+test("sorting reorders the existing rows instead of rebuilding them", async ({ page }) => {
+  await mp3Row(page, "Encore").evaluate((row) => row.setAttribute("data-marker", "kept"));
+
+  await page.locator(".sort-title").click();
+  await expect.poll(() => mp3Titles(page)).toEqual(["Encore", "Filename Song", "Opening Song", "Second Song"]);
+
+  await expect(mp3Row(page, "Encore")).toHaveAttribute("data-marker", "kept");
+});
+
 test("a row's playlist menu closes on an outside click", async ({ page }) => {
   const row = mp3Row(page, "Encore");
   await row.getByRole("button", { name: "Add to Playlist" }).click();

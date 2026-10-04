@@ -131,6 +131,16 @@ test("dragging the seek bar moves the playback position", async ({ page }) => {
   await expect(page.locator("#player-position")).toHaveText(/^0:3\d$/);
 });
 
+test("the length display counts down the time left", async ({ page }) => {
+  await play(page, "Encore");
+  await waitForLength(page);
+
+  await page.locator("#player-seek").fill("30");
+
+  await expect.poll(() => audioProperty(page, "currentTime")).toBeGreaterThanOrEqual(30);
+  await expect(page.locator("#player-duration")).toHaveText(/^0:3\d$/);
+});
+
 test("restart returns to the start of the track", async ({ page }) => {
   await play(page, "Encore");
   await waitForLength(page);

@@ -4,6 +4,7 @@ pub mod names;
 pub mod paths;
 pub mod playback;
 pub mod queue;
+pub mod reorder;
 pub mod search;
 pub mod selection;
 pub mod sort;

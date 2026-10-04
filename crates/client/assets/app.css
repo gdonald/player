@@ -996,6 +996,34 @@ p.text-center {
   border-color: var(--wa-bevel-dark) var(--wa-bevel-light) var(--wa-bevel-light) var(--wa-bevel-dark);
 }
 
+/* Playlist entry drag handles and drop markers */
+
+.drag-handle {
+  cursor: grab;
+  color: var(--wa-green-dim);
+  padding: 0 4px;
+}
+
+.drag-handle:hover {
+  color: var(--wa-green);
+}
+
+.drag-handle:active {
+  cursor: grabbing;
+}
+
+#playlist-mp3s tr.drop-above td {
+  box-shadow:
+    inset 0 2px 0 var(--wa-green),
+    inset 0 0 0 9999px var(--bs-table-bg-state, var(--bs-table-bg-type, var(--bs-table-accent-bg)));
+}
+
+#playlist-mp3s tr.drop-below td {
+  box-shadow:
+    inset 0 -2px 0 var(--wa-green),
+    inset 0 0 0 9999px var(--bs-table-bg-state, var(--bs-table-bg-type, var(--bs-table-accent-bg)));
+}
+
 /* Phones and narrow windows: one scrolling column of player, library
    buttons, page content, then the playlist, equalizer, and visualization
    windows, each of which collapses with its button. */

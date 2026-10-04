@@ -60,6 +60,11 @@ pub fn percent(position: f64, duration: f64) -> f64 {
     (position / duration * 100.0).clamp(0.0, 100.0)
 }
 
+/// Seconds left in the track, never below 0.
+pub fn remaining(position: f64, duration: f64) -> f64 {
+    (duration - position).max(0.0)
+}
+
 /// A stored volume between 0 and 1, or full volume when missing or unreadable.
 pub fn parse_volume(stored: Option<&str>) -> f64 {
     stored
@@ -149,6 +154,17 @@ mod tests {
         assert!(percent(5.0, 0.0).abs() < f64::EPSILON);
         assert!(percent(5.0, f64::NAN).abs() < f64::EPSILON);
         assert!(percent(f64::NAN, 10.0).abs() < f64::EPSILON);
+    }
+
+    #[test]
+    fn remaining_is_the_time_left_in_the_track() {
+        assert!((remaining(30.0, 120.0) - 90.0).abs() < f64::EPSILON);
+    }
+
+    #[test]
+    fn remaining_is_zero_past_the_end_or_without_a_known_duration() {
+        assert!(remaining(200.0, 100.0).abs() < f64::EPSILON);
+        assert!(remaining(5.0, f64::NAN).abs() < f64::EPSILON);
     }
 
     #[test]

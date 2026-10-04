@@ -6,9 +6,9 @@ use axum::routing::{get, post};
 use axum::{Json, Router};
 use player_core::{search, sort};
 use player_types::{
-    CountsResponse, MessageResponse, Mp3Params, Mp3Response, Mp3sResponse, PlaylistMp3sResponse,
-    PlaylistParams, PlaylistResponse, PlaylistsResponse, QueuedMp3Params, QueuedMp3sResponse,
-    SessionParams, SourceParams, SourceResponse, SourcesResponse,
+    CountsResponse, MessageResponse, Mp3Params, Mp3Response, Mp3sResponse, PlaylistMp3MoveParams,
+    PlaylistMp3sResponse, PlaylistParams, PlaylistResponse, PlaylistsResponse, QueuedMp3Params,
+    QueuedMp3sResponse, SessionParams, SourceParams, SourceResponse, SourcesResponse,
 };
 use serde::Deserialize;
 use serde_json::{Value, json};
@@ -19,7 +19,6 @@ use tower_sessions::Session;
 use crate::app::AppState;
 use crate::error::{AppError, AppResult};
 use crate::params::Params;
-use crate::playlist_mp3s::Move;
 use crate::{mp3s, playlist_mp3s, playlists, queue, sources, users};
 
 pub const USER_ID: &str = "user_id";
@@ -54,12 +53,8 @@ pub fn api(state: AppState) -> Router<AppState> {
             axum::routing::delete(playlist_mp3s_destroy),
         )
         .route(
-            "/playlists/{playlist_id}/playlist_mp3s/{id}/move_higher",
-            post(playlist_mp3s_move_higher),
-        )
-        .route(
-            "/playlists/{playlist_id}/playlist_mp3s/{id}/move_lower",
-            post(playlist_mp3s_move_lower),
+            "/playlists/{playlist_id}/playlist_mp3s/{id}/move_to",
+            post(playlist_mp3s_move_to),
         )
         .route(
             "/queued_mp3s",
@@ -309,20 +304,12 @@ async fn playlist_mp3s_index(
     entries_list(&state, playlist_id).await
 }
 
-async fn playlist_mp3s_move_higher(
+async fn playlist_mp3s_move_to(
     State(state): State<AppState>,
     Path((playlist_id, id)): Path<(i64, i64)>,
+    Params(params): Params<PlaylistMp3MoveParams>,
 ) -> AppResult<Json<PlaylistMp3sResponse>> {
-    playlist_mp3s::move_entry(&state.pool, playlist_id, id, Move::Higher).await?;
-
-    entries_list(&state, playlist_id).await
-}
-
-async fn playlist_mp3s_move_lower(
-    State(state): State<AppState>,
-    Path((playlist_id, id)): Path<(i64, i64)>,
-) -> AppResult<Json<PlaylistMp3sResponse>> {
-    playlist_mp3s::move_entry(&state.pool, playlist_id, id, Move::Lower).await?;
+    playlist_mp3s::move_to(&state.pool, playlist_id, id, params.position).await?;
 
     entries_list(&state, playlist_id).await
 }
