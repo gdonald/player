@@ -124,7 +124,7 @@ mod tests {
     fn no_bins_or_no_rate_gives_empty_bars() {
         assert_eq!(bar_levels(&[], SAMPLE_RATE, 3), vec![0.0; 3]);
         assert_eq!(bar_levels(&[255; 8], 0.0, 2), vec![0.0; 2]);
-        assert!(bar_levels(&[255; 8], SAMPLE_RATE, 0).is_empty());
+        assert_eq!(bar_levels(&[255; 8], SAMPLE_RATE, 0), Vec::<f32>::new());
     }
 
     #[test]
@@ -196,7 +196,7 @@ mod tests {
     #[test]
     fn tilt_of_one_bar_lowers_it_fully() {
         assert!((tilt(&[0.5])[0] - (0.5 - BASS_TILT)).abs() < 1e-6);
-        assert!(tilt(&[]).is_empty());
+        assert_eq!(tilt(&[]), Vec::<f32>::new());
     }
 
     #[test]

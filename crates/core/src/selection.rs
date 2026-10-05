@@ -55,6 +55,6 @@ mod tests {
     #[test]
     fn select_all_checks_or_clears_every_row() {
         assert_eq!(select_all(true, &[3, 4]), vec![3, 4]);
-        assert!(select_all(false, &[3, 4]).is_empty());
+        assert_eq!(select_all(false, &[3, 4]), Vec::<i64>::new());
     }
 }

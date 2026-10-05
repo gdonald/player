@@ -466,7 +466,7 @@ async fn scan_request_while_scanning_is_ignored(pool: PgPool) {
 
     scanned.scan().await;
 
-    assert!(scanned.rows().await.is_empty());
+    assert_eq!(scanned.rows().await, Vec::new());
     assert_eq!(scanned.state().await, Some(SourceState::Scanning));
 }
 
@@ -487,7 +487,7 @@ async fn hidden_files_and_directories_are_not_scanned(pool: PgPool) {
 
     scanned.scan().await;
 
-    assert!(scanned.rows().await.is_empty());
+    assert_eq!(scanned.rows().await, Vec::new());
 }
 
 #[test]

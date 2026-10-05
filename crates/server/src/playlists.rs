@@ -325,7 +325,10 @@ mod tests {
 
     #[test]
     fn requested_ids_are_empty_without_attributes() {
-        assert!(requested_ids(&PlaylistParams::default()).is_empty());
+        assert_eq!(
+            requested_ids(&PlaylistParams::default()),
+            Vec::<Option<i64>>::new()
+        );
     }
 
     #[sqlx::test]

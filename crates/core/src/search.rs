@@ -103,7 +103,7 @@ mod tests {
 
     #[test]
     fn whitespace_only_phrase_is_dropped() {
-        assert!(parse("\" \"").parts.is_empty());
+        assert_eq!(parse("\" \"").parts, Vec::<String>::new());
     }
 
     #[test]
@@ -129,7 +129,7 @@ mod tests {
         let query = parse("album:\"Abbey Road\"");
 
         assert_eq!(query.album.as_deref(), Some("Abbey Road"));
-        assert!(query.parts.is_empty());
+        assert_eq!(query.parts, Vec::<String>::new());
     }
 
     #[test]
@@ -138,7 +138,7 @@ mod tests {
 
         assert_eq!(query.artist.as_deref(), Some("Two"));
         assert_eq!(query.album.as_deref(), Some("One"));
-        assert!(query.parts.is_empty());
+        assert_eq!(query.parts, Vec::<String>::new());
     }
 
     #[test]
