@@ -31,6 +31,9 @@ pub enum Command {
         #[command(subcommand)]
         command: SourceCommand,
     },
+    /// Write the browser tests' demo library of tagged silent MP3s.
+    #[command(hide = true)]
+    DemoLibrary { directory: std::path::PathBuf },
 }
 
 #[derive(Debug, Subcommand)]
@@ -91,6 +94,10 @@ pub async fn run(
             let source = sources::create(pool, &path).await?;
             writeln!(output, "Created source {} at {}", source.id, source.path)?;
         }
+        Command::DemoLibrary { directory } => {
+            crate::fixtures::write_demo_library(&directory)?;
+            writeln!(output, "Wrote the demo library to {}", directory.display())?;
+        }
     }
 
     Ok(())
@@ -99,6 +106,8 @@ pub async fn run(
 #[cfg(test)]
 mod tests {
     use std::collections::VecDeque;
+
+    use clap::CommandFactory;
 
     use super::*;
 
@@ -234,6 +243,30 @@ mod tests {
         let (result, _) = run_command(&pool, command, &["only one"]).await;
 
         assert_eq!(result.unwrap_err().to_string(), "no more answers");
+    }
+
+    #[sqlx::test]
+    async fn demo_library_writes_tagged_mp3s(pool: PgPool) {
+        let directory = tempfile::tempdir().unwrap();
+        let command = Command::DemoLibrary {
+            directory: directory.path().to_path_buf(),
+        };
+
+        let (result, output) = run_command(&pool, command, &[]).await;
+
+        result.unwrap();
+        assert_eq!(
+            output,
+            format!("Wrote the demo library to {}\n", directory.path().display())
+        );
+        assert!(crate::tags::read(&directory.path().join("Other Band/Encore.mp3")).is_ok());
+    }
+
+    #[test]
+    fn demo_library_is_left_out_of_the_help() {
+        let help = Cli::command().render_help().to_string();
+
+        assert!(!help.contains("demo-library"), "{help}");
     }
 
     #[sqlx::test]

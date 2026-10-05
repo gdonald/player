@@ -33,7 +33,7 @@ export async function apiLogIn(request: APIRequestContext) {
 /// Rewrites the demo library, empties every table but users, and scans the
 /// library again, so each test starts from the same four songs.
 export async function resetData(request: APIRequestContext) {
-  execFileSync(path.join(ROOT, "target/debug/examples/demo_library"), [LIBRARY]);
+  execFileSync(path.join(ROOT, "target/debug/player"), ["demo-library", LIBRARY]);
 
   await sql(
     "TRUNCATE queued_mp3s, playlist_mp3s, playlists, mp3s, albums, artists, sources RESTART IDENTITY CASCADE",

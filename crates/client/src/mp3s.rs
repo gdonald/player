@@ -357,7 +357,8 @@ fn PlaylistsForm(
 ) -> impl IntoView {
     let ctx = ctx();
     let creating = RwSignal::new(false);
-    let chosen = RwSignal::new("0".to_string());
+    // The chosen playlist's id, or 0 for "Select Playlist".
+    let chosen = RwSignal::new(0_i64);
     let name = RwSignal::new(String::new());
     let errors = RwSignal::new(None::<FieldErrors>);
 
@@ -373,9 +374,7 @@ fn PlaylistsForm(
     let add = move |event: MouseEvent| {
         event.prevent_default();
 
-        let Ok(playlist_id) = chosen.get_untracked().parse::<i64>() else {
-            return;
-        };
+        let playlist_id = chosen.get_untracked();
         if playlist_id == 0 {
             return;
         }
@@ -416,14 +415,14 @@ fn PlaylistsForm(
                                 <select
                                     class="form-select"
                                     id="playlist-select"
-                                    prop:value=move || chosen.get()
+                                    prop:value=move || chosen.get().to_string()
                                     on:change=move |event| {
                                         let value = event_target_value(&event);
                                         if value == "new" {
                                             name.set(names::playlist_name_from_query(ctx.query.get_untracked().as_deref()));
                                             creating.set(true);
                                         }
-                                        chosen.set(value);
+                                        chosen.set(value.parse().unwrap_or(0));
                                     }
                                 >
                                     <option value="0">"Select Playlist"</option>
@@ -457,7 +456,7 @@ fn PlaylistsForm(
                             class="btn btn-primary"
                             on:click=move |event: MouseEvent| {
                                 event.prevent_default();
-                                chosen.set("0".to_string());
+                                chosen.set(0);
                                 creating.set(false);
                             }
                         >

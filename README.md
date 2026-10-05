@@ -10,6 +10,7 @@ Web-based MP3 player. The server is Rust (axum, sqlx, Postgres). The browser cli
 - [Trunk](https://trunkrs.dev) to build the client
 - Postgres
 - Node, for the browser tests only
+- For the coverage gates in `./test.sh`: nightly Rust with `llvm-tools-preview` and the `wasm32-unknown-unknown` target, `cargo-llvm-cov`, `jq`, and a clang that targets wasm32
 
 ## Setup
 
@@ -37,7 +38,13 @@ Each theme is one stylesheet, `crates/client/themes/theme-<name>.css`, holding e
 ./test.sh
 ```
 
-Runs formatting and lint checks, the Rust tests with the coverage gate (100% of lines, functions, and branches), and the Playwright browser tests in `features/`. `./check.sh` formats the tree first.
+Runs formatting and lint checks, the Rust tests with the coverage gate, and the Playwright browser tests in `features/`. Coverage must be 100% of lines, functions, and branches for the server, the shared crates, and the client. `./check.sh` formats the tree first.
+
+The server and shared crates are measured with `cargo llvm-cov`, including the `player` binary, which `crates/server/tests/binary.rs` runs. The run prints coverage per file and the branch total, and writes an HTML report to `target/coverage/html/index.html` and an lcov file to `target/coverage/lcov.info`.
+
+The client runs in the browser, so its coverage comes from the Playwright tests. `test.sh` builds a copy of the client with coverage counters (nightly, the `coverage` feature, and `scripts/coverage-rustc.sh`), runs the browser tests against it, and saves the counters before every page load and at the end of each test. The counters are merged and reported against the client's coverage map, and the report is written to `target/coverage/client/index.html`.
+
+`.github/workflows/ci.yml` runs `./test.sh` on every push to `main` and every pull request, against a Postgres service, and uploads the coverage report and the Playwright report as artifacts.
 
 ## iOS
 

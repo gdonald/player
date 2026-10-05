@@ -1,4 +1,5 @@
-import { Page, expect, test } from "@playwright/test";
+import { Page } from "@playwright/test";
+import { expect, test } from "./fixtures";
 import { logIn, mp3Id, mp3Row, queueTitles, resetData, sql } from "./helpers";
 
 test.beforeEach(async ({ page, request }) => {
@@ -233,4 +234,20 @@ test("a title wider than its box slides by its overflow", async ({ page }) => {
   const title = page.locator("#player-title");
   await expect(title).toHaveClass(/player-marquee-scrolling/);
   await expect(title).toHaveAttribute("style", /--marquee-shift: -\d+px/);
+});
+
+test("the space bar with nothing playing does nothing", async ({ page }) => {
+  await page.locator("body").press("Space");
+
+  await expect(page.locator("#player-title")).toHaveText("Nothing playing");
+  await expect(page.locator("#player-audio")).toHaveCount(0);
+});
+
+test("keys other than the space bar leave playback alone", async ({ page }) => {
+  await play(page, "Encore");
+  await waitUntilPlaying(page);
+
+  await page.locator("body").press("a");
+
+  await expect.poll(() => audioProperty(page, "paused")).toBe(false);
 });

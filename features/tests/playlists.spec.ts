@@ -1,4 +1,4 @@
-import { expect, test } from "@playwright/test";
+import { expect, test } from "./fixtures";
 import { alert, createPlaylist, currentQueueRow, logIn, menu, queueTitles, resetData } from "./helpers";
 
 let playlistId: number;
@@ -96,7 +96,9 @@ test("the row under a dragged entry shows where it will land", async ({ page }) 
   await handle(page, "Opening Song").hover();
   await page.mouse.down();
   const target = (await handle(page, "Second Song").boundingBox())!;
+  // Chromium only fires dragover after more than one move over the target.
   await page.mouse.move(target.x + target.width / 2, target.y + target.height / 2, { steps: 5 });
+  await page.mouse.move(target.x + target.width / 2 + 1, target.y + target.height / 2);
 
   await expect(page.locator("#playlist-mp3s tbody tr", { hasText: "Second Song" })).toHaveClass(/drop-below/);
 
@@ -145,4 +147,49 @@ test("enqueue from the playlist view queues the playlist", async ({ page }) => {
   await page.click("#enqueue");
 
   await expect.poll(() => queueTitles(page)).toEqual(["Opening Song", "Encore", "Second Song"]);
+});
+
+test("the playlist page's breadcrumb returns to the playlists", async ({ page }) => {
+  await openMix(page);
+
+  await page.locator(".breadcrumb a", { hasText: "Playlists" }).click();
+
+  await expect(page.locator("#playlists")).toBeVisible();
+});
+
+test("clicking an entry's title queues the song", async ({ page }) => {
+  await openMix(page);
+
+  await entryTitles(page).filter({ hasText: "Encore" }).click();
+
+  await expect.poll(() => queueTitles(page)).toEqual(["Encore"]);
+});
+
+test("clicking an entry's artist searches for the artist", async ({ page }) => {
+  await openMix(page);
+
+  await page.locator("#playlist-mp3s tbody tr", { hasText: "Encore" }).locator(".search-artist").click();
+
+  await expect(page.locator("#search")).toHaveValue('artist:"Other Band"');
+});
+
+test("dragging something other than an entry over a row marks nothing", async ({ page }) => {
+  await openMix(page);
+  const row = page.locator("#playlist-mp3s tbody tr", { hasText: "Encore" });
+
+  await row.dispatchEvent("dragover");
+
+  await expect(row).toHaveClass("align-middle");
+});
+
+test("a drag started without drag data still moves the entry", async ({ page }) => {
+  await openMix(page);
+  await expect(entryTitles(page)).toHaveText(["Opening Song", "Encore", "Second Song"]);
+
+  await handle(page, "Second Song").dispatchEvent("dragstart");
+  const target = page.locator("#playlist-mp3s tbody tr", { hasText: "Opening Song" });
+  await target.dispatchEvent("dragover");
+  await target.dispatchEvent("drop");
+
+  await expect(entryTitles(page)).toHaveText(["Second Song", "Opening Song", "Encore"]);
 });

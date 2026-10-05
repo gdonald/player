@@ -1,0 +1,8 @@
+target
+crates/client/dist
+features
+.git
+.env
+.ruby-lsp
+ss.png
+default*.profraw

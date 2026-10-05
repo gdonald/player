@@ -1,4 +1,5 @@
-import { Page, expect, test } from "@playwright/test";
+import { Page } from "@playwright/test";
+import { expect, test } from "./fixtures";
 import { logIn, resetData } from "./helpers";
 
 const DEFAULT_TITLE_COLOR = "rgb(217, 199, 108)";
@@ -61,6 +62,8 @@ test("the steel theme shows white display text and green playlist text", async (
       .poll(() => page.locator(selector).first().evaluate((element) => getComputedStyle(element).color))
       .toBe(STEEL_DISPLAY_COLOR);
   }
+  // The login click leaves the pointer over the first row, which would show its hover color.
+  await page.mouse.move(0, 0);
   await expect
     .poll(() => page.locator("#mp3s tbody td").nth(1).evaluate((element) => getComputedStyle(element).color))
     .toBe(STEEL_LIST_COLOR);

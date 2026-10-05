@@ -31,13 +31,6 @@ impl DropEdge {
     }
 }
 
-/// The 1-based position that dropping on the target row moves an entry to.
-pub fn drop_position(ids: &[i64], target: i64) -> Option<i64> {
-    let index = ids.iter().position(|id| *id == target)?;
-
-    i64::try_from(index + 1).ok()
-}
-
 /// Which edge of the target row the moving entry lands on: above when it moves
 /// up, below when it moves down, and none when it stays put.
 pub fn drop_edge(ids: &[i64], moving: i64, target: i64) -> Option<DropEdge> {
@@ -54,16 +47,6 @@ pub fn drop_edge(ids: &[i64], moving: i64, target: i64) -> Option<DropEdge> {
 #[cfg(test)]
 mod tests {
     use super::*;
-
-    #[test]
-    fn drop_position_is_the_target_rows_place_in_the_list() {
-        assert_eq!(drop_position(&[4, 5, 6], 6), Some(3));
-    }
-
-    #[test]
-    fn drop_position_is_none_for_a_missing_row() {
-        assert_eq!(drop_position(&[4, 5, 6], 9), None);
-    }
 
     #[test]
     fn moving_up_lands_above_the_target() {

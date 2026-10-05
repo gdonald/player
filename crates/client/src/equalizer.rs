@@ -154,9 +154,10 @@ pub fn Equalizer() -> impl IntoView {
                             aria-label="Presets"
                             prop:value=preset_name
                             on:change=move |event| {
-                                if let Some(preset) = equalizer::preset(&event_target_value(&event)) {
-                                    set_gains(preset.gains);
-                                }
+                                // The Custom option is disabled, so a change always picks a preset.
+                                let preset = equalizer::preset(&event_target_value(&event))
+                                    .expect("the menu offers only presets");
+                                set_gains(preset.gains);
                             }
                         >
                             {PRESETS

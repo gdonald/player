@@ -88,10 +88,10 @@ pub fn Player() -> impl IntoView {
     let has_queue = move || ctx.queue.with(|queue| !queue.is_empty());
 
     let seek_to = move |seconds: f64| {
-        if let Some(element) = audio.get_untracked() {
+        ctx.with_audio(|element| {
             element.set_current_time(seconds);
             position.set(seconds);
-        }
+        });
     };
 
     // Play starts a stopped queue, resumes a paused track, and restarts a
@@ -107,28 +107,28 @@ pub fn Player() -> impl IntoView {
     };
 
     let pause = move || {
-        if let Some(element) = audio.get_untracked() {
+        ctx.with_audio(|element| {
             element.pause().ok();
-        }
+        });
     };
 
     // Pause toggles between paused and playing.
     let toggle_pause = move || {
-        if let Some(element) = audio.get_untracked() {
+        ctx.with_audio(|element| {
             if element.paused() {
                 element.play().ok();
             } else {
                 element.pause().ok();
             }
-        }
+        });
     };
 
     let stop = move || {
-        if let Some(element) = audio.get_untracked() {
+        ctx.with_audio(|element| {
             element.pause().ok();
             seek_to(0.0);
             transport.set(Transport::Stopped);
-        }
+        });
     };
 
     let restart = move || seek_to(0.0);
@@ -152,19 +152,14 @@ pub fn Player() -> impl IntoView {
     // also reads the position at the frame rate while a track plays.
     let follow = set_interval_with_handle(
         move || {
-            if transport.get_untracked() == Transport::Playing
-                && let Some(element) = audio.get_untracked()
-            {
-                position.set(element.current_time());
+            if transport.get_untracked() == Transport::Playing {
+                ctx.with_audio(|element| position.set(element.current_time()));
             }
         },
         POSITION_FRAME,
-    );
-    on_cleanup(move || {
-        if let Ok(handle) = follow {
-            handle.clear();
-        }
-    });
+    )
+    .expect("the browser runs intervals");
+    on_cleanup(move || follow.clear());
 
     let space_toggles = window_event_listener(leptos::ev::keydown, move |event: KeyboardEvent| {
         let toggles = event
@@ -181,14 +176,7 @@ pub fn Player() -> impl IntoView {
 
     if let Some(session) = media_session() {
         let handlers: Vec<(MediaSessionAction, Closure<dyn Fn()>)> = vec![
-            (
-                MediaSessionAction::Play,
-                Closure::new(move || {
-                    if let Some(element) = audio.get_untracked() {
-                        element.play().ok();
-                    }
-                }),
-            ),
+            (MediaSessionAction::Play, Closure::new(play)),
             (MediaSessionAction::Pause, Closure::new(pause)),
             (MediaSessionAction::Stop, Closure::new(stop)),
             (
@@ -205,11 +193,10 @@ pub fn Player() -> impl IntoView {
         let actions: Vec<MediaSessionAction> = handlers.iter().map(|(action, _)| *action).collect();
         let kept = StoredValue::new_local(handlers);
 
+        let cleared_session = session.clone();
         on_cleanup(move || {
-            if let Some(session) = media_session() {
-                for action in actions {
-                    session.set_action_handler(action, None);
-                }
+            for action in actions {
+                cleared_session.set_action_handler(action, None);
             }
             kept.dispose();
         });
@@ -266,14 +253,17 @@ pub fn Player() -> impl IntoView {
     let marquee_text: NodeRef<html::Span> = NodeRef::new();
     let overflow = RwSignal::new(0_i32);
 
+    // Called from an effect and a resize listener, which only run while the
+    // player is mounted, so both elements exist.
     let measure = move || {
+        let frame = marquee.get_untracked().expect("the marquee is mounted");
+        let text = marquee_text
+            .get_untracked()
+            .expect("the marquee text is mounted");
+
         request_animation_frame(move || {
-            if let (Some(frame), Some(text)) =
-                (marquee.get_untracked(), marquee_text.get_untracked())
-            {
-                let room = frame.client_width() - MARQUEE_PADDING;
-                overflow.set((text.offset_width() - room).max(0));
-            }
+            let room = frame.client_width() - MARQUEE_PADDING;
+            overflow.set((text.offset_width() - room).max(0));
         });
     };
 

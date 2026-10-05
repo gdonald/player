@@ -1,4 +1,5 @@
-import { Page, expect, test } from "@playwright/test";
+import { Page } from "@playwright/test";
+import { expect, test } from "./fixtures";
 import { logIn, menu, resetData, sql } from "./helpers";
 
 test.use({ viewport: { width: 390, height: 844 } });

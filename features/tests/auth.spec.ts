@@ -1,4 +1,4 @@
-import { expect, test } from "@playwright/test";
+import { expect, test } from "./fixtures";
 import { LIBRARY_ORDER, PASSWORD, USERNAME, logIn, mp3Titles, resetData } from "./helpers";
 
 test.beforeEach(async ({ request }) => {
@@ -10,6 +10,24 @@ test("the login form shows before signing in", async ({ page }) => {
 
   await expect(page.locator("#username")).toBeVisible();
   await expect(page.locator("#password")).toBeVisible();
+});
+
+test("the login fields span most of a phone screen", async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.goto("/");
+
+  for (const field of ["#username", "#password"]) {
+    const box = (await page.locator(field).boundingBox())!;
+    expect(box.width).toBeGreaterThanOrEqual(300);
+  }
+});
+
+test("the login fields keep a narrow column on a desktop screen", async ({ page }) => {
+  await page.setViewportSize({ width: 1920, height: 1080 });
+  await page.goto("/");
+
+  const box = (await page.locator("#username").boundingBox())!;
+  expect(box.width).toBeLessThanOrEqual(400);
 });
 
 test("a wrong password keeps the login form", async ({ page }) => {
@@ -49,4 +67,24 @@ test("the password can be submitted with the enter key", async ({ page }) => {
   await page.press("#password", "Enter");
 
   await expect(page.locator(".library-nav")).toBeVisible();
+});
+
+test("submitting the login form without a username stays on the form", async ({ page }) => {
+  await page.goto("/");
+  await page.fill("#password", PASSWORD);
+
+  await page.click("button[type=submit]");
+
+  await expect(page.locator("#username")).toBeVisible();
+  await expect(page.locator(".library-nav")).toHaveCount(0);
+});
+
+test("submitting the login form without a password stays on the form", async ({ page }) => {
+  await page.goto("/");
+  await page.fill("#username", USERNAME);
+
+  await page.click("button[type=submit]");
+
+  await expect(page.locator("#username")).toBeVisible();
+  await expect(page.locator(".library-nav")).toHaveCount(0);
 });

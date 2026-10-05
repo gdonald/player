@@ -207,10 +207,18 @@ pub async fn update(pool: &PgPool, id: i64, params: &Mp3Params) -> AppResult<Mp3
     .map_err(title_taken)?;
 
     let file = PathBuf::from(path);
-    let written =
-        tokio::task::spawn_blocking(move || tags::write_names(&file, &title, &artist, &album))
-            .await
-            .map_err(anyhow::Error::from)?;
+    let written = tokio::task::spawn_blocking(move || {
+        let edits = tags::Edits {
+            title: &title,
+            artist: &artist,
+            album: &album,
+            track: track.and_then(|track| u32::try_from(track).ok()),
+        };
+
+        tags::write_edits(&file, &edits)
+    })
+    .await
+    .map_err(anyhow::Error::from)?;
 
     if let Err(error) = written {
         return Err(AppError::field(

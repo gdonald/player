@@ -19,19 +19,25 @@ impl ApiError {
         }
     }
 
-    pub fn message(&self) -> String {
+    /// The text to show, or none for an ended session, which goes back to
+    /// the login form instead.
+    pub fn message(&self) -> Option<String> {
         match self {
-            ApiError::Unauthorized => "Please log in".to_string(),
-            ApiError::Invalid(Value::Array(messages)) => messages
-                .iter()
-                .filter_map(Value::as_str)
-                .collect::<Vec<_>>()
-                .join(", "),
-            ApiError::Invalid(body) => body["message"]
-                .as_str()
-                .unwrap_or("Request failed")
-                .to_string(),
-            ApiError::Failed(text) => text.clone(),
+            ApiError::Unauthorized => None,
+            ApiError::Invalid(Value::Array(messages)) => Some(
+                messages
+                    .iter()
+                    .filter_map(Value::as_str)
+                    .collect::<Vec<_>>()
+                    .join(", "),
+            ),
+            ApiError::Invalid(body) => Some(
+                body["message"]
+                    .as_str()
+                    .unwrap_or("Request failed")
+                    .to_string(),
+            ),
+            ApiError::Failed(text) => Some(text.clone()),
         }
     }
 }
@@ -48,7 +54,7 @@ async fn send(builder: RequestBuilder, body: Option<&Value>) -> Result<Response,
         Some(body) => builder.json(body),
         None => builder.build(),
     }
-    .map_err(|error| ApiError::Failed(error.to_string()))?;
+    .expect("a request to an app path with a JSON or empty body builds");
 
     let response = request
         .send()

@@ -1,4 +1,4 @@
-import { expect, test } from "@playwright/test";
+import { expect, test } from "./fixtures";
 import { LIBRARY_ORDER, alert, logIn, mp3Row, mp3Titles, resetData, sql } from "./helpers";
 
 test.beforeEach(async ({ page, request }) => {
@@ -230,4 +230,50 @@ test("an artist link search is kept across a reload", async ({ page }) => {
 
 test("the search button is labeled Clear", async ({ page }) => {
   await expect(page.locator("#button-addon-search")).toHaveText("Clear");
+});
+
+test("typing quickly searches once for the whole word", async ({ page }) => {
+  await page.locator("#search").pressSequentially("encore", { delay: 20 });
+
+  await expect.poll(() => mp3Titles(page)).toEqual(["Encore"]);
+});
+
+test("a row's playlist menu closes when its button is clicked again", async ({ page }) => {
+  const button = mp3Row(page, "Encore").getByRole("button", { name: "Add to Playlist" });
+  await button.click();
+  await expect(mp3Row(page, "Encore").locator(".dropdown-menu")).toBeVisible();
+
+  await button.click();
+
+  await expect(mp3Row(page, "Encore").locator(".dropdown-menu")).toHaveCount(0);
+});
+
+test("adding selected songs with no playlist chosen does nothing", async ({ page }) => {
+  await page.check("#select-all");
+
+  await page.click("#add-selected");
+
+  await expect(alert(page)).toHaveCount(0);
+  expect(await sql("SELECT 1 FROM playlist_mp3s")).toHaveLength(0);
+});
+
+test("saving a song with a blank track clears its track", async ({ page }) => {
+  await mp3Row(page, "Encore").locator(".edit-mp3").click();
+  await expect(page.locator("#title")).toHaveValue("Encore");
+
+  await page.fill("#track", "");
+  await page.click("#save");
+
+  await expect(alert(page)).toContainText("MP3 updated");
+  const rows = await sql<{ track: number | null }>("SELECT track FROM mp3s WHERE title = 'Encore'");
+  expect(rows[0].track).toBeNull();
+});
+
+test("pressing Enter in the search box searches without reloading the page", async ({ page }) => {
+  await page.fill("#search", "encore");
+
+  await page.locator("#search").press("Enter");
+
+  await expect.poll(() => mp3Titles(page)).toEqual(["Encore"]);
+  await expect(page.locator("#search")).toHaveValue("encore");
 });

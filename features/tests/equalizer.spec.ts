@@ -1,4 +1,5 @@
-import { Page, expect, test } from "@playwright/test";
+import { Page } from "@playwright/test";
+import { expect, test } from "./fixtures";
 import { logIn, mp3Row, queueTitles, resetData } from "./helpers";
 
 test.beforeEach(async ({ page, request }) => {

@@ -1,0 +1,167 @@
+import { Page } from "@playwright/test";
+import { expect, test } from "./fixtures";
+import { logIn, mp3Row, queueTitles, resetData } from "./helpers";
+
+test.beforeEach(async ({ request }) => {
+  await resetData(request);
+});
+
+async function play(page: Page, title: string) {
+  const before = (await queueTitles(page)).length;
+  await mp3Row(page, title).locator(".play-mp3").click();
+  await expect.poll(async () => (await queueTitles(page)).length).toBe(before + 1);
+}
+
+function audioPaused(page: Page) {
+  return page.locator("#player-audio").evaluate((audio: HTMLAudioElement) => audio.paused);
+}
+
+/// Keeps each media key handler the app registers, so a test can press the
+/// keys, which pages cannot do on their own.
+async function captureMediaKeys(page: Page) {
+  await page.addInitScript(() => {
+    const handlers: Record<string, (() => void) | null> = {};
+    (window as unknown as { mediaKeys: typeof handlers }).mediaKeys = handlers;
+    const register = navigator.mediaSession.setActionHandler.bind(navigator.mediaSession);
+    navigator.mediaSession.setActionHandler = (action, handler) => {
+      handlers[action] = handler as (() => void) | null;
+      register(action, handler);
+    };
+  });
+}
+
+function pressMediaKey(page: Page, action: string) {
+  return page.evaluate((name) => {
+    (window as unknown as { mediaKeys: Record<string, () => void> }).mediaKeys[name]();
+  }, action);
+}
+
+test("media keys pause, play, skip, restart, and stop", async ({ page }) => {
+  await captureMediaKeys(page);
+  await logIn(page);
+  await play(page, "Encore");
+  await play(page, "Opening Song");
+  await expect.poll(() => audioPaused(page)).toBe(false);
+
+  await pressMediaKey(page, "pause");
+  await expect.poll(() => audioPaused(page)).toBe(true);
+
+  await pressMediaKey(page, "play");
+  await expect.poll(() => audioPaused(page)).toBe(false);
+
+  await page.locator("#player-seek").fill("30");
+  await pressMediaKey(page, "previoustrack");
+  await expect
+    .poll(() => page.locator("#player-audio").evaluate((audio: HTMLAudioElement) => audio.currentTime))
+    .toBeLessThan(5);
+
+  await pressMediaKey(page, "nexttrack");
+  await expect(page.locator("#player-title")).toContainText("Opening Song");
+
+  await pressMediaKey(page, "stop");
+  await expect(page.locator("#player-state")).toHaveClass(/bi-stop-fill/);
+});
+
+test("media keys with nothing queued do nothing", async ({ page }) => {
+  await captureMediaKeys(page);
+  await logIn(page);
+
+  for (const action of ["play", "pause", "stop", "previoustrack", "nexttrack"]) {
+    await pressMediaKey(page, action);
+  }
+
+  await expect(page.locator("#player-title")).toHaveText("Nothing playing");
+});
+
+test("the play key starts a stopped queue", async ({ page }) => {
+  await captureMediaKeys(page);
+  await logIn(page);
+  await play(page, "Encore");
+  await page.reload();
+  await expect.poll(() => queueTitles(page)).toEqual(["Encore"]);
+  await expect(page.locator("#player-audio")).toHaveCount(0);
+
+  await pressMediaKey(page, "play");
+
+  await expect(page.locator("#player-title")).toContainText("Encore");
+});
+
+test("the player works in a browser without the Media Session API", async ({ page }) => {
+  await page.addInitScript(() => {
+    delete (Navigator.prototype as unknown as { mediaSession?: unknown }).mediaSession;
+  });
+  await logIn(page);
+
+  await play(page, "Encore");
+
+  await expect.poll(() => audioPaused(page)).toBe(false);
+});
+
+test("songs still play when Web Audio cannot start", async ({ page }) => {
+  await page.addInitScript(() => {
+    window.AudioContext = function () {
+      throw new Error("Web Audio is unavailable");
+    } as unknown as typeof AudioContext;
+  });
+  await logIn(page);
+
+  await play(page, "Encore");
+
+  await expect.poll(() => audioPaused(page)).toBe(false);
+});
+
+test("songs still play when the equalizer cannot attach to the audio element", async ({ page }) => {
+  await page.addInitScript(() => {
+    AudioContext.prototype.createMediaElementSource = function () {
+      throw new Error("the element is attached elsewhere");
+    };
+  });
+  await logIn(page);
+
+  await play(page, "Encore");
+
+  await expect.poll(() => audioPaused(page)).toBe(false);
+});
+
+test("changing the equalizer while a song plays keeps it playing", async ({ page }) => {
+  await logIn(page);
+  await play(page, "Encore");
+  await expect.poll(() => audioPaused(page)).toBe(false);
+  await page.click("#equalizer-toggle");
+
+  await page.selectOption("#equalizer-preset", "Rock");
+
+  await expect(page.locator("#equalizer-on")).toHaveAttribute("aria-pressed", "true");
+  await expect.poll(() => audioPaused(page)).toBe(false);
+});
+
+test("a song played after the playlist was cleared still plays", async ({ page }) => {
+  await logIn(page);
+  await play(page, "Encore");
+  await expect.poll(() => audioPaused(page)).toBe(false);
+  await page.click("#queue-clear");
+  await expect.poll(() => queueTitles(page)).toEqual([]);
+  await expect(page.locator("#player-audio")).toHaveCount(0);
+
+  await play(page, "Opening Song");
+
+  await expect.poll(() => audioPaused(page)).toBe(false);
+});
+
+test("the app works when the browser blocks storage", async ({ page }) => {
+  await page.addInitScript(() => {
+    Object.defineProperty(window, "localStorage", {
+      get() {
+        throw new Error("storage is blocked");
+      },
+    });
+  });
+  await logIn(page);
+  await play(page, "Encore");
+
+  await page.selectOption("#theme-select", "charcoal");
+  await expect(page.locator("link#theme")).toHaveAttribute("href", "/themes/theme-charcoal.css");
+
+  await page.reload();
+  await expect(page.locator("link#theme")).toHaveAttribute("href", "/themes/theme-default.css");
+});

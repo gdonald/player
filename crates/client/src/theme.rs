@@ -11,9 +11,11 @@ fn stored() -> Theme {
 
 /// Points the theme stylesheet link in index.html at the theme's file.
 fn apply(chosen: Theme) {
-    if let Some(link) = document().get_element_by_id("theme") {
-        link.set_attribute("href", &chosen.stylesheet()).ok();
-    }
+    document()
+        .get_element_by_id("theme")
+        .expect("index.html has the theme link")
+        .set_attribute("href", &chosen.stylesheet())
+        .ok();
 }
 
 /// Puts the stored theme in place, which also replaces a stored name that is

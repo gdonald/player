@@ -69,19 +69,17 @@ fn draw(canvas: &web_sys::HtmlCanvasElement, levels: &[f32], peaks: &[f32]) {
         reason = "canvas sizes are small positive pixel counts"
     )]
     let (pixel_width, pixel_height) = (width as u32, height as u32);
-    if canvas.width() != pixel_width || canvas.height() != pixel_height {
+    if (canvas.width(), canvas.height()) != (pixel_width, pixel_height) {
         canvas.set_width(pixel_width);
         canvas.set_height(pixel_height);
     }
 
-    let Some(context) = canvas
+    let context = canvas
         .get_context("2d")
         .ok()
         .flatten()
         .and_then(|context| context.dyn_into::<CanvasRenderingContext2d>().ok())
-    else {
-        return;
-    };
+        .expect("a canvas has a 2d context");
 
     let palette = Palette::read(canvas);
 
@@ -150,13 +148,10 @@ pub fn Visualizer() -> impl IntoView {
             peaks.with_value(|peaks| draw(&element, &levels, peaks));
         },
         FRAME,
-    );
+    )
+    .expect("the browser runs intervals");
 
-    on_cleanup(move || {
-        if let Ok(handle) = frame {
-            handle.clear();
-        }
-    });
+    on_cleanup(move || frame.clear());
 
     view! {
         <div class="winamp-window visualizer">

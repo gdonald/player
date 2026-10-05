@@ -78,9 +78,8 @@ fn LoginForm() -> impl IntoView {
 
     view! {
         <div class="container-fluid">
-            <div class="row mt-5">
-                <div class="col-5"></div>
-                <div class="col-2">
+            <div class="row mt-5 justify-content-center">
+                <div class="col-11 col-sm-8 col-md-4 col-xl-2">
                     <form on:submit=submit>
                         <div class="mb-3">
                             <label for="username" class="form-label">"Username"</label>
@@ -105,7 +104,6 @@ fn LoginForm() -> impl IntoView {
                         <button type="submit" class="btn btn-primary">"Login"</button>
                     </form>
                 </div>
-                <div class="col-5"></div>
             </div>
         </div>
     }
@@ -369,6 +367,7 @@ fn Queue() -> impl IntoView {
                                 .enumerate()
                                 .map(|(index, entry)| {
                                     let id = entry.id;
+                                    let chosen = entry.clone();
                                     let is_current = move || current_id() == Some(id);
                                     let length = entry
                                         .mp3
@@ -379,7 +378,7 @@ fn Queue() -> impl IntoView {
                                         <tr
                                             class=move || if is_current() { "playlist-row table-primary" } else { "playlist-row" }
                                             title="Double-click to play"
-                                            on:dblclick=move |_| ctx.play_entry(id)
+                                            on:dblclick=move |_| ctx.play_entry(chosen.clone())
                                         >
                                             <td class="playlist-name">
                                                 {format!("{}. {} - ", index + 1, entry.mp3.artist_name)}

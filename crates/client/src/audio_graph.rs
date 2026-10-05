@@ -3,7 +3,7 @@ use player_core::equalizer::{self, BANDS, FilterKind, PEAKING_Q, Settings};
 use player_core::spectrum;
 use wasm_bindgen::JsValue;
 use web_sys::{
-    AnalyserNode, AudioContext, AudioContextState, BiquadFilterNode, BiquadFilterType, GainNode,
+    AnalyserNode, AudioContext, AudioNode, BiquadFilterNode, BiquadFilterType, GainNode,
     HtmlMediaElement, MediaElementAudioSourceNode,
 };
 
@@ -63,15 +63,14 @@ impl Graph {
             filters.push(filter);
         }
 
-        if let Some(first) = filters.first() {
-            preamp.connect_with_audio_node(first)?;
-        }
-        for pair in filters.windows(2) {
-            pair[0].connect_with_audio_node(&pair[1])?;
-        }
-        if let Some(last) = filters.last() {
-            last.connect_with_audio_node(&analyser)?;
-        }
+        let last_filter =
+            filters
+                .iter()
+                .try_fold(AudioNode::from(preamp.clone()), |previous, filter| {
+                    previous.connect_with_audio_node(filter)?;
+                    Ok::<_, JsValue>(AudioNode::from(filter.clone()))
+                });
+        last_filter?.connect_with_audio_node(&analyser)?;
         analyser.connect_with_audio_node(&context.destination())?;
 
         let bins = vec![0; usize::try_from(analyser.frequency_bin_count()).unwrap_or(0)];
@@ -117,26 +116,18 @@ impl Graph {
     }
 
     /// Browsers start an audio context suspended until the page has had a
-    /// click or key press.
+    /// click or key press. Resuming a running context changes nothing.
     fn resume(&self) {
-        if self.context.state() == AudioContextState::Suspended {
-            self.context.resume().ok();
-        }
+        self.context.resume().ok();
     }
 }
 
 /// The audio chain behind the player, shared by the equalizer and the
 /// analyzer through context.
-#[derive(Debug, Clone, Copy)]
+#[derive(Clone, Copy)]
 pub struct AudioGraph {
     graph: StoredValue<Option<Graph>, LocalStorage>,
     pub settings: RwSignal<Settings>,
-}
-
-impl std::fmt::Debug for Graph {
-    fn fmt(&self, formatter: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        formatter.write_str("Graph")
-    }
 }
 
 pub fn audio_graph() -> AudioGraph {
@@ -157,26 +148,25 @@ impl AudioGraph {
 
         Effect::new(move |_| {
             let current = handle.settings.get();
-            let element = audio.get();
 
-            if element.is_some() && handle.graph.with_value(Option::is_none) {
-                match Graph::build() {
-                    Ok(built) => handle.graph.set_value(Some(built)),
-                    Err(error) => leptos::logging::error!("audio chain unavailable: {error:?}"),
-                }
-            }
-
-            handle.graph.update_value(|graph| {
-                if let Some(graph) = graph {
-                    if let Some(element) = &element
-                        && let Err(error) = graph.attach(element)
-                    {
-                        leptos::logging::error!("audio chain could not attach: {error:?}");
+            if let Some(element) = audio.get() {
+                if handle.graph.with_value(Option::is_none) {
+                    match Graph::build() {
+                        Ok(built) => handle.graph.set_value(Some(built)),
+                        Err(error) => leptos::logging::error!("audio chain unavailable: {error:?}"),
                     }
-                    graph.apply(&current);
-                    graph.resume();
                 }
-            });
+
+                handle.graph.update_value(|graph| {
+                    if let Some(graph) = graph {
+                        if let Err(error) = graph.attach(&element) {
+                            leptos::logging::error!("audio chain could not attach: {error:?}");
+                        }
+                        graph.apply(&current);
+                        graph.resume();
+                    }
+                });
+            }
 
             store_settings(&current);
         });

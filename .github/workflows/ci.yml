@@ -1,0 +1,87 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+
+    env:
+      CARGO_TERM_COLOR: always
+      PGHOST: localhost
+      PGUSER: postgres
+      PGPASSWORD: postgres
+      DATABASE_URL: postgres://postgres:postgres@localhost/player_test
+      E2E_DATABASE_URL: postgres://postgres:postgres@localhost/player_e2e
+
+    steps:
+      - uses: actions/checkout@v4
+
+      # Nightly is installed first because the action makes the last toolchain
+      # the default, and test.sh expects stable as the default with nightly
+      # called as +nightly for branch coverage and the client coverage build.
+      - uses: dtolnay/rust-toolchain@nightly
+        with:
+          targets: wasm32-unknown-unknown
+          components: llvm-tools-preview
+
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: wasm32-unknown-unknown
+          components: rustfmt, clippy, llvm-tools-preview
+
+      - uses: Swatinem/rust-cache@v2
+
+      - uses: taiki-e/install-action@v2
+        with:
+          tool: cargo-llvm-cov,trunk
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: features/package-lock.json
+
+      - name: Install browser test packages
+        working-directory: features
+        run: |
+          npm ci
+          npx playwright install --with-deps chromium
+
+      - name: Run the test suite
+        run: ./test.sh
+
+      - name: Upload coverage
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage
+          path: target/coverage/
+          if-no-files-found: ignore
+
+      - name: Upload browser test report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report
+          path: |
+            features/playwright-report/
+            features/test-results/
+          if-no-files-found: ignore

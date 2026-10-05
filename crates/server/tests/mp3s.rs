@@ -262,9 +262,10 @@ async fn update_saves_the_row_and_the_file_tags(pool: PgPool) {
         (
             written.title.as_deref(),
             written.artist.as_deref(),
-            written.album.as_deref()
+            written.album.as_deref(),
+            written.track
         ),
-        (Some("New"), Some("Other"), Some("Album"))
+        (Some("New"), Some("Other"), Some("Album"), Some(7))
     );
 }
 

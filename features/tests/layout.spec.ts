@@ -1,4 +1,5 @@
-import { Page, expect, test } from "@playwright/test";
+import { Page } from "@playwright/test";
+import { expect, test } from "./fixtures";
 import { logIn, resetData } from "./helpers";
 
 test.beforeEach(async ({ page, request }) => {
@@ -52,7 +53,7 @@ test("the library buttons sit in one row and mark the open section", async ({ pa
 
 test("no title names the old product", async ({ page }) => {
   await expect(page.locator("body")).not.toContainText(/winamp/i);
-  await expect(page.locator(".winamp-titlebar span")).toHaveText(["LIBRARY", "PLAYLIST", "VISUALIZATION", "EQUALIZER", "PLAYER"]);
+  await expect(page.locator(".winamp-titlebar span")).toHaveText(["LIBRARY", "PLAYLIST", "EQUALIZER", "VISUALIZATION", "PLAYER"]);
 });
 
 test("the selected library button's icon is green", async ({ page }) => {
@@ -74,4 +75,23 @@ test("the PL button hides and shows the playlist, and the choice is kept", async
 
   await page.click("#playlist-toggle");
   await expect(page.locator(".playlist-list")).toBeVisible();
+});
+
+test("the MP3s button returns to the song list", async ({ page }) => {
+  await page.locator(".library-button", { hasText: "Playlists" }).click();
+  await expect(page.locator("#playlists")).toBeVisible();
+
+  await page.locator(".library-button", { hasText: "MP3s" }).click();
+
+  await expect(page.locator("#mp3s")).toBeVisible();
+});
+
+test("the alert's close button dismisses it", async ({ page }) => {
+  await page.route((url) => url.pathname === "/api/playlists", (route) => route.fulfill({ status: 500, body: "" }));
+  await page.locator(".library-button", { hasText: "Playlists" }).click();
+  await expect(page.locator(".alert")).toBeVisible();
+
+  await page.locator(".alert .btn-close").click();
+
+  await expect(page.locator(".alert")).toHaveCount(0);
 });

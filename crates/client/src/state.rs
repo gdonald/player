@@ -3,6 +3,7 @@ use leptos::task::spawn_local;
 use player_core::{paths, queue};
 use player_types::{FlexId, QueuedMp3, QueuedMp3Params, QueuedMp3sResponse, wrap};
 use serde_json::json;
+use web_sys::HtmlAudioElement;
 
 use crate::api::{self, ApiError};
 use crate::storage;
@@ -88,10 +89,9 @@ impl Ctx {
     }
 
     pub fn fail(&self, error: &ApiError) {
-        if matches!(error, ApiError::Unauthorized) {
-            self.authenticated.set(Some(false));
-        } else {
-            self.message.set(error.message());
+        match error.message() {
+            Some(text) => self.message.set(text),
+            None => self.authenticated.set(Some(false)),
         }
     }
 
@@ -116,11 +116,19 @@ impl Ctx {
             .with_untracked(|entries| entries.iter().find(|entry| entry.id == id).cloned())
     }
 
-    fn restart(&self) {
+    /// Runs `act` on the `<audio>` element, which exists while a song is
+    /// loaded.
+    pub fn with_audio(&self, act: impl FnOnce(&HtmlAudioElement)) {
         if let Some(element) = self.audio.get_untracked() {
+            act(&element);
+        }
+    }
+
+    fn restart(&self) {
+        self.with_audio(|element| {
             element.set_current_time(0.0);
             element.play().ok();
-        }
+        });
     }
 
     fn play(&self, entry: Option<QueuedMp3>) {
@@ -155,15 +163,13 @@ impl Ctx {
 
     /// Plays the chosen queue entry. Choosing the entry that is already
     /// playing starts it over.
-    pub fn play_entry(&self, id: i64) {
-        if self.current_id() == Some(id) {
+    pub fn play_entry(&self, entry: QueuedMp3) {
+        if self.current_id() == Some(entry.id) {
             self.restart();
             return;
         }
 
-        if let Some(entry) = self.entry(id) {
-            self.play(Some(entry));
-        }
+        self.play(Some(entry));
     }
 
     pub fn start_if_idle(&self) {
@@ -180,11 +186,13 @@ impl Ctx {
     }
 
     /// Nothing loaded, stopped, or finished. A song paused partway through
-    /// is not stopped.
+    /// is not stopped. With nothing loaded the `<audio>` element is gone, but
+    /// its `NodeRef` can still hold it, paused where it was.
     fn is_stopped(&self) -> bool {
-        self.audio.get_untracked().is_none_or(|element| {
-            element.paused() && (element.current_time() <= 0.0 || element.ended())
-        })
+        self.src.with_untracked(Option::is_none)
+            || self.audio.get_untracked().is_none_or(|element| {
+                element.paused() && (element.current_time() <= 0.0 || element.ended())
+            })
     }
 
     /// After an enqueue: when nothing is playing, start the first song it

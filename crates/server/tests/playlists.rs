@@ -492,13 +492,13 @@ async fn move_to_places_the_entry_at_the_position_and_updates_the_end_flags(pool
     )
     .await;
     let listed = entries(&mut library.app, id).await;
-    let one = entry_id(&listed, "One");
+    let three = entry_id(&listed, "Three");
 
     let (_, body) = library
         .app
         .send(
             Method::POST,
-            &format!("/api/playlists/{id}/playlist_mp3s/{one}/move_to"),
+            &format!("/api/playlists/{id}/playlist_mp3s/{three}/move_to"),
             Some(json!({"playlist_mp3": {"position": 1}})),
         )
         .await;
@@ -506,9 +506,9 @@ async fn move_to_places_the_entry_at_the_position_and_updates_the_end_flags(pool
     assert_eq!(
         flags(&body),
         vec![
-            ("One".to_string(), true, false),
-            ("Three".to_string(), false, false),
-            ("Two".to_string(), false, true)
+            ("Three".to_string(), true, false),
+            ("Two".to_string(), false, false),
+            ("One".to_string(), false, true)
         ]
     );
 }

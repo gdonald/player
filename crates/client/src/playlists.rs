@@ -259,14 +259,12 @@ fn PlaylistMp3s(id: i64, entries: RwSignal<Vec<PlaylistMp3>>) -> impl IntoView {
         drop_target.set(None);
     };
 
-    let drop_on = move |target_id: i64| {
+    // `position` is the target row's 1-based place in the list.
+    let drop_on = move |target_id: i64, position: i64| {
         let moving = dragged.get_untracked();
         end_drag();
 
         let Some(moving_id) = moving.filter(|moving_id| *moving_id != target_id) else {
-            return;
-        };
-        let Some(position) = reorder::drop_position(&entry_ids(), target_id) else {
             return;
         };
 
@@ -294,7 +292,7 @@ fn PlaylistMp3s(id: i64, entries: RwSignal<Vec<PlaylistMp3>>) -> impl IntoView {
         ctx.page.set(Page::Mp3s);
     };
 
-    let row = move |entry: PlaylistMp3| {
+    let row = move |entry: PlaylistMp3, position: i64| {
         let entry_id = entry.id;
         let mp3_id = entry.mp3.id;
         let album = entry.mp3.album_name.clone();
@@ -312,7 +310,7 @@ fn PlaylistMp3s(id: i64, entries: RwSignal<Vec<PlaylistMp3>>) -> impl IntoView {
                 }
                 on:drop=move |event: DragEvent| {
                     event.prevent_default();
-                    drop_on(entry_id);
+                    drop_on(entry_id, position);
                 }
             >
                 <td class="tight">
@@ -329,10 +327,9 @@ fn PlaylistMp3s(id: i64, entries: RwSignal<Vec<PlaylistMp3>>) -> impl IntoView {
                                 let row = event
                                     .target()
                                     .and_then(|target| target.dyn_into::<web_sys::Element>().ok())
-                                    .and_then(|handle| handle.closest("tr").ok().flatten());
-                                if let Some(row) = row {
-                                    transfer.set_drag_image(&row, 16, 16);
-                                }
+                                    .and_then(|handle| handle.closest("tr").ok().flatten())
+                                    .expect("the drag handle sits in a table row");
+                                transfer.set_drag_image(&row, 16, 16);
                             }
                             dragged.set(Some(entry_id));
                         }
@@ -407,7 +404,16 @@ fn PlaylistMp3s(id: i64, entries: RwSignal<Vec<PlaylistMp3>>) -> impl IntoView {
                         <th></th>
                     </tr>
                 </thead>
-                <tbody>{move || entries.get().into_iter().map(row).collect_view()}</tbody>
+                <tbody>
+                    {move || {
+                        entries
+                            .get()
+                            .into_iter()
+                            .zip(1..)
+                            .map(|(entry, position)| row(entry, position))
+                            .collect_view()
+                    }}
+                </tbody>
             </table>
         </div>
     }
