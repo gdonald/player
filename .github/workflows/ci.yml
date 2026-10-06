@@ -30,6 +30,7 @@ jobs:
       PGPASSWORD: postgres
       DATABASE_URL: postgres://postgres:postgres@localhost/player_test
       E2E_DATABASE_URL: postgres://postgres:postgres@localhost/player_e2e
+      BROWSER_WORKERS: 2
 
     steps:
       - uses: actions/checkout@v4

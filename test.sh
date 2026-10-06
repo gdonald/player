@@ -4,7 +4,9 @@
 #
 #   DATABASE_URL       Postgres database the Rust tests start from (#[sqlx::test]
 #                      makes a throwaway database per test off it).
-#   E2E_DATABASE_URL   Postgres database the browser tests run against.
+#   E2E_DATABASE_URL   Base name of the browser test databases, one per worker
+#                      (<name>_0 up to <name>_9).
+#   BROWSER_WORKERS    Browser test workers and databases (default 10).
 set -euo pipefail
 
 cd "$(dirname "$0")"
@@ -12,6 +14,7 @@ cd "$(dirname "$0")"
 DB_USER="$(whoami)"
 export DATABASE_URL="${DATABASE_URL:-postgres://$DB_USER@localhost/player_test}"
 E2E_DATABASE_URL="${E2E_DATABASE_URL:-postgres://$DB_USER@localhost/player_e2e}"
+export BROWSER_WORKERS="${BROWSER_WORKERS:-10}"
 COVERAGE_DIR="target/coverage"
 COVERAGE_IGNORE='crates/client/|crates/server/examples/|crates/server/tests/'
 CLIENT_COVERAGE="$PWD/target/client-coverage"
@@ -37,8 +40,11 @@ fi
 step "resetting test databases"
 dropdb --if-exists --force "${DATABASE_URL##*/}"
 createdb "${DATABASE_URL##*/}"
-dropdb --if-exists --force "${E2E_DATABASE_URL##*/}"
-createdb "${E2E_DATABASE_URL##*/}"
+# One database per browser test worker: <E2E database>_0 up to _<BROWSER_WORKERS - 1>.
+for worker in $(seq 0 $((BROWSER_WORKERS - 1))); do
+  dropdb --if-exists --force "${E2E_DATABASE_URL##*/}_$worker"
+  createdb "${E2E_DATABASE_URL##*/}_$worker"
+done
 
 step "format and lints"
 cargo fmt --all --check

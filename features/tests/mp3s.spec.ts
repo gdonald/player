@@ -277,3 +277,16 @@ test("pressing Enter in the search box searches without reloading the page", asy
   await expect.poll(() => mp3Titles(page)).toEqual(["Encore"]);
   await expect(page.locator("#search")).toHaveValue("encore");
 });
+
+test("creating a playlist raises the Playlists count", async ({ page }) => {
+  const playlistsCount = page.locator(".library-button", { hasText: "Playlists" }).locator(".library-count");
+  await expect(playlistsCount).toHaveText("1");
+  await page.check("#select-all");
+  await page.selectOption("#playlist-select", "new");
+  await page.fill("#new-playlist-name", "Road Trip");
+
+  await page.click("#create-playlist");
+
+  await expect(alert(page)).toContainText("Playlist created");
+  await expect(playlistsCount).toHaveText("2");
+});

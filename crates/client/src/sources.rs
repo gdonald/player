@@ -123,6 +123,7 @@ fn NewSource(on_created: Callback<()>) -> impl IntoView {
                     errors.set(None);
                     path.set(String::new());
                     ctx.message.set(response.message.unwrap_or_default());
+                    ctx.load_counts();
                     on_created.run(());
                 }
                 Err(error) => errors.set(ctx.invalid(&error)),

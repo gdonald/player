@@ -108,19 +108,19 @@ mod tests {
 
     #[sqlx::test]
     async fn created_user_authenticates_case_insensitively(pool: PgPool) {
-        let id = create(&pool, new_user("GD", "changeme"), TEST_COST)
+        let id = create(&pool, new_user("GD", "open-sesame"), TEST_COST)
             .await
             .unwrap();
 
         assert_eq!(
-            authenticate(&pool, "Gd", "changeme").await.unwrap(),
+            authenticate(&pool, "Gd", "open-sesame").await.unwrap(),
             Some(id)
         );
     }
 
     #[sqlx::test]
     async fn stored_salt_is_the_hash_prefix(pool: PgPool) {
-        create(&pool, new_user("gd", "changeme"), TEST_COST)
+        create(&pool, new_user("gd", "open-sesame"), TEST_COST)
             .await
             .unwrap();
 
@@ -135,7 +135,7 @@ mod tests {
 
     #[sqlx::test]
     async fn wrong_password_does_not_authenticate(pool: PgPool) {
-        create(&pool, new_user("gd", "changeme"), TEST_COST)
+        create(&pool, new_user("gd", "open-sesame"), TEST_COST)
             .await
             .unwrap();
 

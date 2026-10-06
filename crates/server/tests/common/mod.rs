@@ -14,7 +14,7 @@ use sqlx::PgPool;
 use tower::ServiceExt;
 
 pub const USERNAME: &str = "gd";
-pub const PASSWORD: &str = "changeme";
+pub const PASSWORD: &str = "open-sesame";
 
 pub struct TestApp {
     pub state: AppState,

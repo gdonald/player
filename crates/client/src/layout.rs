@@ -217,14 +217,8 @@ impl Section {
 #[component]
 fn Menu() -> impl IntoView {
     let ctx = ctx();
-    let counts = RwSignal::new(None::<CountsResponse>);
-
-    spawn_local(async move {
-        match api::get::<CountsResponse>("/api/counts").await {
-            Ok(body) => counts.set(Some(body)),
-            Err(error) => ctx.fail(&error),
-        }
-    });
+    let counts = ctx.counts;
+    ctx.load_counts();
 
     let item = move |section: Section| {
         let active = move || section.contains(ctx.page.get());

@@ -2,17 +2,20 @@ import { execFileSync } from "node:child_process";
 import path from "node:path";
 import { APIRequestContext, Page, expect } from "@playwright/test";
 import { Client } from "pg";
+import { DATABASE_URL, LIBRARY } from "./worker";
+
+export { LIBRARY };
 
 const ROOT = path.resolve(__dirname, "../..");
-export const LIBRARY = path.resolve(__dirname, "../.library");
 
-export const USERNAME = "gd";
-export const PASSWORD = "changeme";
+/// The login each worker's server seeds (see fixtures.ts).
+export const USERNAME = "tester";
+export const PASSWORD = "testing-password";
 
 export const LIBRARY_ORDER = ["Filename Song", "Encore", "Opening Song", "Second Song"];
 
 export async function sql<Row = Record<string, unknown>>(query: string, params: unknown[] = []): Promise<Row[]> {
-  const client = new Client({ connectionString: process.env.DATABASE_URL });
+  const client = new Client({ connectionString: DATABASE_URL });
   await client.connect();
 
   try {
@@ -33,7 +36,9 @@ export async function apiLogIn(request: APIRequestContext) {
 /// Rewrites the demo library, empties every table but users, and scans the
 /// library again, so each test starts from the same four songs.
 export async function resetData(request: APIRequestContext) {
-  execFileSync(path.join(ROOT, "target/debug/player"), ["demo-library", LIBRARY]);
+  execFileSync(path.join(ROOT, "target/debug/player"), ["demo-library", LIBRARY], {
+    env: { ...process.env, DATABASE_URL },
+  });
 
   await sql(
     "TRUNCATE queued_mp3s, playlist_mp3s, playlists, mp3s, albums, artists, sources RESTART IDENTITY CASCADE",
@@ -64,11 +69,11 @@ export async function createPlaylist(request: APIRequestContext, name: string, t
   return (await response.json()).playlist.id as number;
 }
 
+/// Signs in through the API, which shares the session cookie with the page,
+/// then opens the app. The login form has its own tests in auth.spec.ts.
 export async function logIn(page: Page) {
+  await apiLogIn(page.request);
   await page.goto("/");
-  await page.fill("#username", USERNAME);
-  await page.fill("#password", PASSWORD);
-  await page.click("button[type=submit]");
   await expect(page.locator(".library-nav")).toBeVisible();
 }
 

@@ -1,5 +1,5 @@
 import { expect, test } from "./fixtures";
-import { LIBRARY_ORDER, PASSWORD, USERNAME, logIn, mp3Titles, resetData } from "./helpers";
+import { LIBRARY_ORDER, PASSWORD, USERNAME, alert, logIn, mp3Row, mp3Titles, queueTitles, resetData } from "./helpers";
 
 test.beforeEach(async ({ request }) => {
   await resetData(request);
@@ -41,7 +41,10 @@ test("a wrong password keeps the login form", async ({ page }) => {
 });
 
 test("the right password shows the library", async ({ page }) => {
-  await logIn(page);
+  await page.goto("/");
+  await page.fill("#username", USERNAME);
+  await page.fill("#password", PASSWORD);
+  await page.click("button[type=submit]");
 
   await expect.poll(() => mp3Titles(page)).toEqual(LIBRARY_ORDER);
 });
@@ -107,4 +110,51 @@ test("a theme chosen on the login page stays after signing in", async ({ page })
 
   await expect(page.locator(".library-nav")).toBeVisible();
   await expect(page.locator("#theme-select")).toHaveValue("steel");
+});
+
+test("the logout button is a small icon in the player's top right corner", async ({ page }) => {
+  await logIn(page);
+
+  const button = (await page.locator("#logout").boundingBox())!;
+  const player = (await page.locator("#player").boundingBox())!;
+
+  expect(button.width).toBeLessThanOrEqual(24);
+  expect(player.x + player.width - (button.x + button.width)).toBeLessThanOrEqual(8);
+  expect(button.y - player.y).toBeLessThanOrEqual(8);
+  await expect(page.locator("#logout i")).toHaveClass(/bi-box-arrow-right/);
+});
+
+test("logging out returns to the login form and ends the session", async ({ page }) => {
+  await logIn(page);
+
+  await page.click("#logout");
+
+  await expect(page.locator("#username")).toBeVisible();
+  await page.reload();
+  await expect(page.locator("#username")).toBeVisible();
+});
+
+test("signing in after logging out mid-song starts with nothing playing", async ({ page }) => {
+  await logIn(page);
+  await mp3Row(page, "Encore").locator(".play-mp3").click();
+  await expect.poll(() => queueTitles(page)).toEqual(["Encore"]);
+
+  await page.click("#logout");
+  await expect(page.locator("#username")).toBeVisible();
+  await page.fill("#username", USERNAME);
+  await page.fill("#password", PASSWORD);
+  await page.click("button[type=submit]");
+
+  await expect(page.locator("#player-title")).toHaveText("Nothing playing");
+  await expect(page.locator("#player-audio")).toHaveCount(0);
+});
+
+test("a failed logout shows the error and stays signed in", async ({ page }) => {
+  await logIn(page);
+  await page.route((url) => url.pathname === "/api/sessions/destroy", (route) => route.fulfill({ status: 500, body: "" }));
+
+  await page.click("#logout");
+
+  await expect(alert(page)).toContainText("Request failed (500)");
+  await expect(page.locator(".library-nav")).toBeVisible();
 });

@@ -41,6 +41,7 @@ async fn main() -> anyhow::Result<()> {
                 &mut TerminalPrompt,
                 &mut std::io::stdout(),
                 bcrypt::DEFAULT_COST,
+                settings.seed_login.as_ref(),
             )
             .await
         }

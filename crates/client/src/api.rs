@@ -103,6 +103,10 @@ pub async fn active() -> bool {
     touch("/api/sessions/active").await.is_ok()
 }
 
+pub async fn logout() -> Result<(), ApiError> {
+    touch("/api/sessions/destroy").await
+}
+
 pub async fn login(username: String, password: String) -> bool {
     let body = wrap(&SessionParams { username, password });
 

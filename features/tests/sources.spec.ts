@@ -83,3 +83,14 @@ test("scanning a source adds its songs", async ({ page }) => {
     })
     .toBe("4");
 });
+
+test("adding a source raises the Sources count", async ({ page }) => {
+  const sourcesCount = menu(page, "Sources").locator(".library-count");
+  await expect(sourcesCount).toHaveText("1");
+
+  await page.fill("#new-source-path", "/zz/music");
+  await page.click("#add-source");
+
+  await expect(alert(page)).toContainText("Source created");
+  await expect(sourcesCount).toHaveText("2");
+});

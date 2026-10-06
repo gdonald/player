@@ -288,6 +288,16 @@ pub fn Player() -> impl IntoView {
         <div class="winamp-window player" id="player">
             <div class="winamp-titlebar">
                 <span>"PLAYER"</span>
+                <button
+                    type="button"
+                    class="winamp-button logout"
+                    id="logout"
+                    title="Log out"
+                    aria-label="Log out"
+                    on:click=move |_: MouseEvent| ctx.log_out()
+                >
+                    <i class="bi-box-arrow-right"></i>
+                </button>
             </div>
             <div class="player-body">
                 <div class="player-lcd" id="player-lcd">

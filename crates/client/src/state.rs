@@ -1,7 +1,7 @@
 use leptos::prelude::*;
 use leptos::task::spawn_local;
 use player_core::{paths, queue};
-use player_types::{FlexId, QueuedMp3, QueuedMp3Params, QueuedMp3sResponse, wrap};
+use player_types::{CountsResponse, FlexId, QueuedMp3, QueuedMp3Params, QueuedMp3sResponse, wrap};
 use serde_json::json;
 use web_sys::HtmlAudioElement;
 
@@ -35,6 +35,8 @@ pub struct Ctx {
     pub audio: NodeRef<leptos::html::Audio>,
     /// Play through, loop one song, or loop the playlist.
     pub mode: RwSignal<queue::Mode>,
+    /// The library counts on the menu buttons.
+    pub counts: RwSignal<Option<CountsResponse>>,
 }
 
 pub fn ctx() -> Ctx {
@@ -63,6 +65,7 @@ impl Ctx {
             src: RwSignal::new(None),
             audio: NodeRef::new(),
             mode: RwSignal::new(queue::Mode::parse(storage::get(MODE_KEY).as_deref())),
+            counts: RwSignal::new(None),
         }
     }
 
@@ -268,6 +271,33 @@ impl Ctx {
     pub fn next(&self) {
         let mode = self.mode.get_untracked();
         self.apply(queue::skip(&self.queue_ids(), self.current_id(), mode));
+    }
+
+    /// Loads the library counts for the menu buttons, after a change that
+    /// adds or removes a playlist or a source.
+    pub fn load_counts(&self) {
+        let ctx = *self;
+        spawn_local(async move {
+            match api::get::<CountsResponse>("/api/counts").await {
+                Ok(body) => ctx.counts.set(Some(body)),
+                Err(error) => ctx.fail(&error),
+            }
+        });
+    }
+
+    /// Ends the session, stops playback, and shows the login form.
+    pub fn log_out(&self) {
+        let ctx = *self;
+        spawn_local(async move {
+            let _waiting = ctx.wait();
+            match api::logout().await {
+                Ok(()) => {
+                    ctx.play(None);
+                    ctx.authenticated.set(Some(false));
+                }
+                Err(error) => ctx.fail(&error),
+            }
+        });
     }
 
     /// Empties the queue and stops playback.

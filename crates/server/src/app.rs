@@ -15,6 +15,7 @@ use tower_sessions_sqlx_store::PostgresStore;
 use tracing_subscriber::EnvFilter;
 
 use crate::scanner::Scanner;
+use crate::seeds::SeedLogin;
 use crate::{db, routes, sources};
 
 pub const SESSION_COOKIE: &str = "_player_session";
@@ -31,6 +32,7 @@ pub struct Settings {
     pub port: u16,
     pub web_root: PathBuf,
     pub log_filter: String,
+    pub seed_login: Option<SeedLogin>,
 }
 
 impl Settings {
@@ -45,6 +47,10 @@ impl Settings {
             web_root: variable("WEB_ROOT")
                 .map_or_else(|| PathBuf::from(DEFAULT_WEB_ROOT), PathBuf::from),
             log_filter: variable("RUST_LOG").unwrap_or_else(|| DEFAULT_LOG_FILTER.to_string()),
+            seed_login: variable("PLAYER_SEED_USERNAME")
+                .filter(|username| !username.is_empty())
+                .zip(variable("PLAYER_SEED_PASSWORD").filter(|password| !password.is_empty()))
+                .map(|(username, password)| SeedLogin { username, password }),
         }
     }
 }
@@ -220,6 +226,7 @@ mod tests {
                 port: DEFAULT_PORT,
                 web_root: PathBuf::from(DEFAULT_WEB_ROOT),
                 log_filter: DEFAULT_LOG_FILTER.to_string(),
+                seed_login: None,
             }
         );
     }
@@ -232,13 +239,43 @@ mod tests {
                 ("PORT", "8080"),
                 ("WEB_ROOT", "/srv/player"),
                 ("RUST_LOG", "debug"),
+                ("PLAYER_SEED_USERNAME", "listener"),
+                ("PLAYER_SEED_PASSWORD", "open-sesame"),
             ]),
             Settings {
                 database_url: "postgres://db/music".to_string(),
                 port: 8080,
                 web_root: PathBuf::from("/srv/player"),
                 log_filter: "debug".to_string(),
+                seed_login: Some(SeedLogin {
+                    username: "listener".to_string(),
+                    password: "open-sesame".to_string(),
+                }),
             }
+        );
+    }
+
+    #[test]
+    fn a_seed_login_needs_both_a_username_and_a_password() {
+        assert_eq!(
+            settings(&[("PLAYER_SEED_USERNAME", "listener")]).seed_login,
+            None
+        );
+        assert_eq!(
+            settings(&[
+                ("PLAYER_SEED_USERNAME", "listener"),
+                ("PLAYER_SEED_PASSWORD", "")
+            ])
+            .seed_login,
+            None
+        );
+        assert_eq!(
+            settings(&[
+                ("PLAYER_SEED_USERNAME", ""),
+                ("PLAYER_SEED_PASSWORD", "open-sesame")
+            ])
+            .seed_login,
+            None
         );
     }
 

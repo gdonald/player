@@ -193,3 +193,14 @@ test("a drag started without drag data still moves the entry", async ({ page }) 
 
   await expect(entryTitles(page)).toHaveText(["Second Song", "Opening Song", "Encore"]);
 });
+
+test("deleting a playlist lowers the Playlists count", async ({ page }) => {
+  const playlistsCount = menu(page, "Playlists").locator(".library-count");
+  await expect(playlistsCount).toHaveText("2");
+  page.once("dialog", (dialog) => dialog.accept());
+
+  await page.locator(`#playlist-${playlistId} .delete-playlist`).click();
+
+  await expect(alert(page)).toContainText("Playlist deleted");
+  await expect(playlistsCount).toHaveText("1");
+});

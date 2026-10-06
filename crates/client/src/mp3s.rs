@@ -366,6 +366,7 @@ fn PlaylistsForm(
         Ok(response) => {
             errors.set(None);
             ctx.message.set(response.message.unwrap_or_default());
+            ctx.load_counts();
             ctx.page.set(Page::Playlist(response.playlist.id));
         }
         Err(error) => errors.set(ctx.invalid(&error)),

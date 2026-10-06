@@ -3,8 +3,9 @@ use std::io::Write;
 use clap::{Parser, Subcommand};
 use sqlx::PgPool;
 
+use crate::seeds::{self, SeedLogin};
 use crate::users::{self, NewUser};
-use crate::{db, seeds, sources};
+use crate::{db, sources};
 
 #[derive(Debug, Parser)]
 #[command(name = "player", about = "Web-based MP3 player")]
@@ -58,6 +59,7 @@ pub async fn run(
     prompt: &mut dyn PasswordPrompt,
     output: &mut dyn Write,
     bcrypt_cost: u32,
+    seed_login: Option<&SeedLogin>,
 ) -> anyhow::Result<()> {
     match command {
         Command::Serve => anyhow::bail!("serve is handled by the binary entry point"),
@@ -66,8 +68,16 @@ pub async fn run(
             writeln!(output, "Migrations applied")?;
         }
         Command::Seed => {
-            seeds::run(pool, bcrypt_cost).await?;
-            writeln!(output, "Seeded")?;
+            seeds::run(pool, bcrypt_cost, seed_login).await?;
+            let message = match seed_login {
+                Some(login) => {
+                    format!("Seeded, with user {}", login.username.trim().to_lowercase())
+                }
+                None => "Seeded, with no user: set PLAYER_SEED_USERNAME and PLAYER_SEED_PASSWORD, \
+                         or run player user add"
+                    .to_string(),
+            };
+            writeln!(output, "{message}")?;
         }
         Command::User {
             command: UserCommand::Add { username },
@@ -144,7 +154,7 @@ mod tests {
         let mut prompt = ScriptedPrompt::new(answers);
         let mut output = Vec::new();
 
-        let result = run(command, pool, &mut prompt, &mut output, 4).await;
+        let result = run(command, pool, &mut prompt, &mut output, 4, None).await;
 
         (result, String::from_utf8(output).unwrap())
     }
@@ -180,11 +190,39 @@ mod tests {
     }
 
     #[sqlx::test]
-    async fn seed_reports_success(pool: PgPool) {
+    async fn seed_without_a_login_says_how_to_add_a_user(pool: PgPool) {
         let (result, output) = run_command(&pool, Command::Seed, &[]).await;
 
         result.unwrap();
-        assert_eq!(output, "Seeded\n");
+        assert_eq!(
+            output,
+            "Seeded, with no user: set PLAYER_SEED_USERNAME and PLAYER_SEED_PASSWORD, or run player user add\n"
+        );
+    }
+
+    #[sqlx::test]
+    async fn seed_with_a_login_names_the_user(pool: PgPool) {
+        let login = SeedLogin {
+            username: "Listener".to_string(),
+            password: "open-sesame".to_string(),
+        };
+        let mut output = Vec::new();
+
+        run(
+            Command::Seed,
+            &pool,
+            &mut ScriptedPrompt::new(&[]),
+            &mut output,
+            4,
+            Some(&login),
+        )
+        .await
+        .unwrap();
+
+        assert_eq!(
+            String::from_utf8(output).unwrap(),
+            "Seeded, with user listener\n"
+        );
     }
 
     #[sqlx::test]
@@ -202,6 +240,7 @@ mod tests {
             &mut prompt,
             &mut output,
             4,
+            None,
         )
         .await
         .unwrap();

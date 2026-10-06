@@ -1,10 +1,16 @@
 #!/usr/bin/env bash
 # Local development: the server on PORT (default 4000) and `trunk serve` on
-# HOST (default 10.0.0.45) port 9000, which rebuilds the client on change and
-# proxies /api/ to the server.
+# HOST (default 127.0.0.1) port 9000, which rebuilds the client on change and
+# proxies /api/ to the server. Settings come from .env (see .env.example).
 set -euo pipefail
 
 cd "$(dirname "$0")"
+
+if [ -f .env ]; then
+  set -a
+  . ./.env
+  set +a
+fi
 
 export DATABASE_URL="${DATABASE_URL:-postgres://$(whoami)@localhost/player_development}"
 DATABASE_NAME="${DATABASE_URL##*/}"
@@ -17,7 +23,7 @@ if ! psql -lqt | cut -d '|' -f 1 | grep -qw "$DATABASE_NAME"; then
 fi
 
 export PORT="${PORT:-4000}"
-HOST="${HOST:-10.0.0.45}"
+HOST="${HOST:-127.0.0.1}"
 
 for port in "$PORT" 9000; do
   if lsof -nP -iTCP:"$port" -sTCP:LISTEN >/dev/null; then

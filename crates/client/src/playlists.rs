@@ -42,6 +42,7 @@ pub fn Playlists() -> impl IntoView {
             match api::delete::<MessageResponse>(&format!("/api/playlists/{id}")).await {
                 Ok(body) => {
                     ctx.message.set(body.message);
+                    ctx.load_counts();
                     load();
                 }
                 Err(error) => ctx.fail(&error),
