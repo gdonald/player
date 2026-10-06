@@ -320,3 +320,21 @@ test("seeking while paused moves the position and stays paused", async ({ page }
   await expect.poll(() => position(page)).toBe(20);
   await expect.poll(() => transport(page)).toBe("paused");
 });
+
+test("the next song is not requested until the current one has loaded", async ({ page }) => {
+  const release = await holdSong(page, "Encore");
+  const nextId = await mp3Id("Opening Song");
+  const requested: string[] = [];
+  page.on("request", (request) => requested.push(request.url()));
+  await enqueue(page, "Encore");
+  await enqueue(page, "Opening Song");
+
+  await expect(page.locator("#player-title")).toContainText("Encore");
+  expect(requested.filter((url) => url.endsWith(`/api/mp3s/${nextId}/play`))).toEqual([]);
+
+  const nextRequested = page.waitForRequest((request) => request.url().endsWith(`/api/mp3s/${nextId}/play`));
+  release();
+
+  await nextRequested;
+  await waitUntilPlaying(page);
+});

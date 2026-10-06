@@ -175,6 +175,8 @@ struct Inner {
     plan: Option<Plan>,
     /// Counts song loads, so a slow load that was replaced is dropped.
     generation: u64,
+    /// Counts next-song loads the same way.
+    next_generation: u64,
 }
 
 impl Inner {
@@ -271,6 +273,7 @@ impl Inner {
         self.halt();
         self.offset = 0.0;
         self.generation += 1;
+        self.next_generation += 1;
         self.plan = None;
 
         let upcoming = self.upcoming.take().map(|upcoming| upcoming.loaded);
@@ -297,45 +300,54 @@ impl Inner {
             if playing {
                 self.begin(engine);
             }
+            self.fetch_next(engine);
         }
     }
 
-    /// The song to follow the current one changed. Returns the load to start
-    /// when the next song is not already decoded.
-    fn prepare(&mut self, engine: Engine, plan: Option<Plan>) -> Option<(AudioContext, Plan)> {
+    /// The song to follow the current one changed.
+    fn prepare(&mut self, engine: Engine, plan: Option<Plan>) {
         if self.plan == plan {
-            return None;
+            return;
         }
 
         self.plan = plan;
+        self.next_generation += 1;
         if let Some(scheduled) = self.upcoming.take().and_then(|upcoming| upcoming.scheduled) {
             scheduled.silence();
         }
 
-        let plan = plan?;
-        let current = self
-            .current
-            .clone()
-            .filter(|loaded| loaded.mp3_id == plan.mp3_id);
+        self.fetch_next(engine);
+    }
 
-        match current {
-            Some(loaded) => {
+    /// Gets the next song ready once the current one is decoded, so the
+    /// current song's download has the connection to itself. The current song
+    /// is reused when it is also the next one.
+    fn fetch_next(&mut self, engine: Engine) {
+        if let (Some(plan), Some(current)) = (self.plan, self.current.clone()) {
+            if current.mp3_id == plan.mp3_id {
                 self.upcoming = Some(Upcoming {
                     plan,
-                    loaded,
+                    loaded: current,
                     scheduled: None,
                 });
                 self.schedule(engine);
-                None
+            } else {
+                let context = self.graph.context.clone();
+                let generation = self.next_generation;
+                spawn_local(async move {
+                    // A next song that fails to load is loaded again, and its
+                    // failure shown, when the queue reaches it.
+                    let loaded = load(context, plan.mp3_id).await.ok();
+                    engine.with_inner(|inner| inner.prepared(engine, generation, plan, loaded));
+                });
             }
-            None => Some((self.graph.context.clone(), plan)),
         }
     }
 
-    /// The next song finished loading. It is kept unless the plan changed
-    /// while it loaded.
-    fn prepared(&mut self, engine: Engine, plan: Plan, loaded: Loaded) {
-        if self.plan == Some(plan) {
+    /// A next-song load finished. It is kept unless the plan changed while it
+    /// loaded.
+    fn prepared(&mut self, engine: Engine, generation: u64, plan: Plan, loaded: Option<Loaded>) {
+        if let (true, Some(loaded)) = (generation == self.next_generation, loaded) {
             self.upcoming = Some(Upcoming {
                 plan,
                 loaded,
@@ -424,6 +436,7 @@ impl Engine {
                 upcoming: None,
                 plan: None,
                 generation: 0,
+                next_generation: 0,
             });
 
         Engine {
@@ -565,17 +578,7 @@ impl Engine {
     /// Tells the engine which entry follows the current song, so it can
     /// decode it and schedule it to start on the current song's last sample.
     pub fn prepare(self, plan: Option<Plan>) {
-        let load_needed = self.with_inner(|inner| inner.prepare(self, plan)).flatten();
-
-        if let Some((context, plan)) = load_needed {
-            spawn_local(async move {
-                // A next song that fails to load is loaded again, and its
-                // failure shown, when the queue reaches it.
-                if let Ok(loaded) = load(context, plan.mp3_id).await {
-                    self.with_inner(|inner| inner.prepared(self, plan, loaded));
-                }
-            });
-        }
+        self.with_inner(|inner| inner.prepare(self, plan));
     }
 
     fn ended(self) {
