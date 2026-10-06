@@ -82,7 +82,6 @@ fn LoginForm() -> impl IntoView {
                 <div class="col-11 col-sm-8 col-md-4 col-xl-2">
                     <div class="winamp-window login" id="login">
                         <div class="winamp-titlebar">
-                            <ThemePicker />
                             <span>"LOGIN"</span>
                         </div>
                         <form class="login-body" on:submit=submit>
