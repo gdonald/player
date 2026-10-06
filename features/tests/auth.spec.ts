@@ -1,5 +1,16 @@
 import { expect, test } from "./fixtures";
-import { LIBRARY_ORDER, PASSWORD, USERNAME, alert, logIn, mp3Row, mp3Titles, queueTitles, resetData } from "./helpers";
+import {
+  LIBRARY_ORDER,
+  PASSWORD,
+  USERNAME,
+  alert,
+  logIn,
+  mp3Row,
+  mp3Titles,
+  queueTitles,
+  resetData,
+  transport,
+} from "./helpers";
 
 test.beforeEach(async ({ request }) => {
   await resetData(request);
@@ -133,7 +144,7 @@ test("signing in after logging out mid-song starts with nothing playing", async 
   await page.click("button[type=submit]");
 
   await expect(page.locator("#player-title")).toHaveText("Nothing playing");
-  await expect(page.locator("#player-audio")).toHaveCount(0);
+  await expect.poll(() => transport(page)).toBe("stopped");
 });
 
 test("a failed logout shows the error and stays signed in", async ({ page }) => {

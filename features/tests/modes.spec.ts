@@ -1,6 +1,6 @@
 import { Page } from "@playwright/test";
 import { expect, test } from "./fixtures";
-import { currentQueueRow, endTrack, logIn, mp3Row, queueTitles, resetData } from "./helpers";
+import { currentQueueRow, endTrack, logIn, mp3Row, position, queueTitles, resetData, songLength } from "./helpers";
 
 test.beforeEach(async ({ page, request }) => {
   await resetData(request);
@@ -13,14 +13,10 @@ async function enqueue(page: Page, title: string) {
   await expect.poll(async () => (await queueTitles(page)).length).toBe(before + 1);
 }
 
-function audioTime(page: Page) {
-  return page.locator("#player-audio").evaluate((audio: HTMLAudioElement) => audio.currentTime);
-}
-
 async function seekTo(page: Page, seconds: number) {
-  await expect(page.locator("#player-duration")).toHaveText(/^1:0\d$/);
+  await songLength(page);
   await page.locator("#player-seek").fill(String(seconds));
-  await expect.poll(() => audioTime(page)).toBeGreaterThanOrEqual(seconds);
+  await expect.poll(() => position(page)).toBeGreaterThanOrEqual(seconds);
 }
 
 function modeButton(page: Page, mode: "play" | "loop-one" | "loop-all") {
@@ -60,7 +56,7 @@ test("loop one starts the same song over and keeps every song", async ({ page })
 
   await endTrack(page);
 
-  await expect.poll(() => audioTime(page)).toBeLessThan(5);
+  await expect.poll(() => position(page)).toBeLessThan(5);
   await expect(currentQueueRow(page)).toContainText("Encore");
   await expect.poll(() => queueTitles(page)).toEqual(["Encore", "Opening Song"]);
 });
@@ -98,7 +94,7 @@ test("loop all starts a song queued twice over when it follows itself", async ({
   await endTrack(page);
 
   await expect(page.locator("#queue tr").nth(1)).toHaveClass(/table-primary/);
-  await expect.poll(() => audioTime(page)).toBeLessThan(5);
+  await expect.poll(() => position(page)).toBeLessThan(5);
 });
 
 test("next in a loop mode moves on, wraps, and keeps every song", async ({ page }) => {
@@ -121,4 +117,15 @@ test("next in play-through mode removes the current song", async ({ page }) => {
   await page.click("#player-next");
 
   await expect.poll(() => queueTitles(page)).toEqual(["Opening Song"]);
+});
+
+test("next with one song in a loop mode starts it over", async ({ page }) => {
+  await modeButton(page, "loop-all").click();
+  await enqueue(page, "Encore");
+  await seekTo(page, 30);
+
+  await page.click("#player-next");
+
+  await expect.poll(() => position(page)).toBeLessThan(5);
+  await expect(currentQueueRow(page)).toContainText("Encore");
 });

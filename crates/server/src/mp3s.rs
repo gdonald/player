@@ -6,7 +6,7 @@ use player_types::{Mp3, Mp3Params};
 use serde_json::Value;
 use sqlx::{PgPool, Postgres, QueryBuilder};
 
-use crate::db::{escape_like, is_unique_violation};
+use crate::db::{escape_like, is_unique_violation, push_search_parts};
 use crate::error::{AppError, AppResult, Validation};
 use crate::{library, tags};
 
@@ -71,28 +71,11 @@ pub async fn search(pool: &PgPool, query: &SearchQuery, sort: Sort) -> sqlx::Res
     let mut builder: QueryBuilder<Postgres> = QueryBuilder::new(SELECT);
     builder.push(" WHERE TRUE");
 
-    if !query.parts.is_empty() {
-        builder.push(" AND (");
-
-        for (field_index, field) in ["ar.name", "al.name", "m.title"].iter().enumerate() {
-            if field_index > 0 {
-                builder.push(" OR ");
-            }
-            builder.push("(");
-
-            for (part_index, part) in query.parts.iter().enumerate() {
-                if part_index > 0 {
-                    builder.push(" AND ");
-                }
-                builder.push(format!("{field} ILIKE "));
-                builder.push_bind(format!("%{}%", escape_like(part)));
-            }
-
-            builder.push(")");
-        }
-
-        builder.push(")");
-    }
+    push_search_parts(
+        &mut builder,
+        &["ar.name", "al.name", "m.title"],
+        &query.parts,
+    );
 
     if let Some(artist) = &query.artist {
         builder.push(" AND ar.name ILIKE ");

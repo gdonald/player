@@ -5,7 +5,6 @@ use player_core::{playback, queue, title};
 use player_types::CountsResponse;
 
 use crate::api;
-use crate::audio_graph::AudioGraph;
 use crate::equalizer::Equalizer;
 use crate::mp3s::{Mp3Edit, Mp3s};
 use crate::player::Player;
@@ -23,6 +22,8 @@ pub fn App() -> impl IntoView {
     let ctx = Ctx::new();
     provide_context(ctx);
     ctx.remember_query();
+    ctx.engine.run();
+    ctx.follow_engine();
     theme::apply_stored();
 
     spawn_local(async move {
@@ -117,7 +118,6 @@ fn LoginForm() -> impl IntoView {
 #[component]
 fn Layout() -> impl IntoView {
     let ctx = ctx();
-    AudioGraph::provide();
 
     view! {
         <div class="container-fluid app-frame">

@@ -1,0 +1,141 @@
+import { Page } from "@playwright/test";
+import { expect, test } from "./fixtures";
+import { LIBRARY_ORDER, logIn, mp3Titles, resetData } from "./helpers";
+
+test.beforeEach(async ({ page, request }) => {
+  await resetData(request);
+  await logIn(page);
+  await expect.poll(() => mp3Titles(page)).toEqual(LIBRARY_ORDER);
+});
+
+function rows(page: Page, table: string) {
+  return page.locator(`#${table} tbody tr`);
+}
+
+function modeButton(page: Page, mode: string) {
+  return page.locator(`#list-${mode}`);
+}
+
+test("the list buttons are a small group in the top right of the page", async ({ page }) => {
+  const group = (await page.locator(".list-modes").boundingBox())!;
+  const content = (await page.locator(".main-content").boundingBox())!;
+
+  await expect(page.locator(".list-modes button")).toHaveText(["Songs", "Albums", "Artists"]);
+  await expect(modeButton(page, "songs")).toHaveAttribute("aria-pressed", "true");
+  expect(group.height).toBeLessThanOrEqual(24);
+  expect(content.x + content.width - (group.x + group.width)).toBeLessThanOrEqual(24);
+  expect(group.y - content.y).toBeLessThanOrEqual(24);
+});
+
+test("the Albums button lists each album with its artist and song count", async ({ page }) => {
+  await modeButton(page, "albums").click();
+
+  await expect(modeButton(page, "albums")).toHaveAttribute("aria-pressed", "true");
+  await expect(rows(page, "albums")).toHaveText([
+    /Unknown\s*Filename Artist\s*1/,
+    /Live\s*Other Band\s*1/,
+    /First Album\s*The Testers\s*2/,
+  ]);
+});
+
+test("the Artists button lists each artist with album and song counts", async ({ page }) => {
+  await modeButton(page, "artists").click();
+
+  await expect(rows(page, "artists")).toHaveText([
+    /Filename Artist\s*1\s*1/,
+    /Other Band\s*1\s*1/,
+    /The Testers\s*1\s*2/,
+  ]);
+});
+
+test("the Songs button returns to the song list", async ({ page }) => {
+  await modeButton(page, "artists").click();
+  await expect(rows(page, "artists")).toHaveCount(3);
+
+  await modeButton(page, "songs").click();
+
+  await expect.poll(() => mp3Titles(page)).toEqual(LIBRARY_ORDER);
+});
+
+test("clicking an album shows its songs", async ({ page }) => {
+  await modeButton(page, "albums").click();
+
+  await rows(page, "albums").filter({ hasText: "First Album" }).locator(".show-album").click();
+
+  await expect(modeButton(page, "songs")).toHaveAttribute("aria-pressed", "true");
+  await expect(page.locator("#search")).toHaveValue('artist:"The Testers" album:"First Album"');
+  await expect.poll(() => mp3Titles(page)).toEqual(["Opening Song", "Second Song"]);
+});
+
+test("clicking an album's artist shows the artist's songs", async ({ page }) => {
+  await modeButton(page, "albums").click();
+
+  await rows(page, "albums").filter({ hasText: "Live" }).locator(".show-artist").click();
+
+  await expect(page.locator("#search")).toHaveValue('artist:"Other Band"');
+  await expect.poll(() => mp3Titles(page)).toEqual(["Encore"]);
+});
+
+test("clicking an artist shows the artist's songs", async ({ page }) => {
+  await modeButton(page, "artists").click();
+
+  await rows(page, "artists").filter({ hasText: "The Testers" }).locator(".show-artist").click();
+
+  await expect(modeButton(page, "songs")).toHaveAttribute("aria-pressed", "true");
+  await expect.poll(() => mp3Titles(page)).toEqual(["Opening Song", "Second Song"]);
+});
+
+test("clicking an artist's album count shows the artist's albums", async ({ page }) => {
+  await modeButton(page, "artists").click();
+
+  await rows(page, "artists").filter({ hasText: "The Testers" }).locator(".show-albums").click();
+
+  await expect(modeButton(page, "albums")).toHaveAttribute("aria-pressed", "true");
+  await expect(rows(page, "albums")).toHaveText([/First Album\s*The Testers\s*2/]);
+});
+
+test("the search narrows the albums and the artists", async ({ page }) => {
+  await modeButton(page, "albums").click();
+  await page.fill("#search", "testers");
+  await expect(rows(page, "albums")).toHaveText([/First Album/]);
+
+  await modeButton(page, "artists").click();
+
+  await expect(page.locator("#search")).toHaveValue("testers");
+  await expect(rows(page, "artists")).toHaveText([/The Testers/]);
+});
+
+test("a search with no albums or artists says so", async ({ page }) => {
+  await page.fill("#search", "nothing like this");
+  await expect(page.getByText("No mp3s found.")).toBeVisible();
+
+  await modeButton(page, "albums").click();
+  await expect(page.getByText("No albums found.")).toBeVisible();
+
+  await modeButton(page, "artists").click();
+  await expect(page.getByText("No artists found.")).toBeVisible();
+});
+
+test("the chosen list is kept across a reload", async ({ page }) => {
+  await modeButton(page, "albums").click();
+  await expect(rows(page, "albums")).toHaveCount(3);
+
+  await page.reload();
+
+  await expect(modeButton(page, "albums")).toHaveAttribute("aria-pressed", "true");
+  await expect(rows(page, "albums")).toHaveCount(3);
+});
+
+test("failed album and artist loads show the error", async ({ page }) => {
+  await page.route(
+    (url) => url.pathname === "/api/albums" || url.pathname === "/api/artists",
+    (route) => route.fulfill({ status: 500, body: "" }),
+  );
+
+  await modeButton(page, "albums").click();
+  await expect(page.locator(".alert")).toContainText("Request failed (500)");
+
+  await page.locator(".alert .btn-close").click();
+  await modeButton(page, "artists").click();
+  await expect(page.locator(".alert")).toContainText("Request failed (500)");
+});

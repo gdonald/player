@@ -492,7 +492,8 @@ body {
 }
 
 .btn:active,
-.btn.show {
+.btn.show,
+.btn.active {
   border-color: #4a4a5c #f0f0f6 #f0f0f6 #4a4a5c !important;
   background: linear-gradient(var(--wa-button-bottom), var(--wa-button-top)) !important;
   color: var(--wa-button-text) !important;

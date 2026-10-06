@@ -11,3 +11,4 @@ pub mod sort;
 pub mod spectrum;
 pub mod theme;
 pub mod title;
+pub mod views;

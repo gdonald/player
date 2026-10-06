@@ -150,7 +150,8 @@ body {
 
 .winamp-button:active:not(:disabled),
 .btn:active,
-.btn.show {
+.btn.show,
+.btn.active {
   border-color: var(--st-outline) !important;
   background: var(--st-button-pressed) !important;
   box-shadow:

@@ -115,3 +115,52 @@ test("the charcoal theme fits a short window with the equalizer open", async ({ 
 
   await expect.poll(() => pageOverflow(page)).toBe(0);
 });
+
+test("the login page keeps the chosen theme after logging out", async ({ page }) => {
+  await page.selectOption("#theme-select", "charcoal");
+  await expect.poll(() => titleColor(page)).toBe(CHARCOAL_TITLE_COLOR);
+
+  await page.click("#logout");
+
+  await expect(page.locator("#login")).toBeVisible();
+  await expect(themeLink(page)).toHaveAttribute("href", "/themes/theme-charcoal.css");
+  await expect
+    .poll(() => page.locator("#login .winamp-titlebar span").evaluate((title) => getComputedStyle(title).color))
+    .toBe(CHARCOAL_TITLE_COLOR);
+});
+
+test("the login page uses the chosen theme after a reload", async ({ page }) => {
+  await page.selectOption("#theme-select", "steel");
+  await page.click("#logout");
+  await expect(page.locator("#login")).toBeVisible();
+
+  await page.reload();
+
+  await expect(page.locator("#login")).toBeVisible();
+  await expect(themeLink(page)).toHaveAttribute("href", "/themes/theme-steel.css");
+});
+
+test("the login page keeps the default theme after switching back to it and logging out", async ({ page }, testInfo) => {
+  await page.selectOption("#theme-select", "steel");
+  await page.selectOption("#theme-select", "default");
+  await expect.poll(() => titleColor(page)).toBe(DEFAULT_TITLE_COLOR);
+
+  await page.click("#logout");
+
+  await expect(page.locator("#login")).toBeVisible();
+  await page.screenshot({ path: testInfo.outputPath("login-default.png") });
+  await expect(themeLink(page)).toHaveAttribute("href", "/themes/theme-default.css");
+  await expect
+    .poll(() => page.locator("#login .winamp-titlebar span").evaluate((title) => getComputedStyle(title).color))
+    .toBe(DEFAULT_TITLE_COLOR);
+});
+
+test("the login page uses the default theme after logging out when no theme was chosen", async ({ page }) => {
+  await page.click("#logout");
+
+  await expect(page.locator("#login")).toBeVisible();
+  await expect(themeLink(page)).toHaveAttribute("href", "/themes/theme-default.css");
+  await expect
+    .poll(() => page.locator("#login .winamp-titlebar span").evaluate((title) => getComputedStyle(title).color))
+    .toBe(DEFAULT_TITLE_COLOR);
+});

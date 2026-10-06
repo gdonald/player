@@ -1,6 +1,6 @@
 import { Page } from "@playwright/test";
 import { expect, test } from "./fixtures";
-import { logIn, mp3Row, queueTitles, resetData } from "./helpers";
+import { logIn, mp3Row, position, queueTitles, resetData, transport } from "./helpers";
 
 test.beforeEach(async ({ page, request }) => {
   await resetData(request);
@@ -146,9 +146,8 @@ test("playback keeps going through the equalizer", async ({ page }) => {
   await mp3Row(page, "Encore").locator(".play-mp3").click();
   await expect.poll(() => queueTitles(page)).toEqual(["Encore"]);
 
-  const audio = page.locator("#player-audio");
-  await expect.poll(() => audio.evaluate((element: HTMLAudioElement) => element.currentTime)).toBeGreaterThan(1);
-  await expect.poll(() => audio.evaluate((element: HTMLAudioElement) => element.paused)).toBe(false);
+  await expect.poll(() => position(page)).toBeGreaterThan(1);
+  await expect.poll(() => transport(page)).toBe("playing");
 });
 
 test("the panel shows under the playlist", async ({ page }, testInfo) => {

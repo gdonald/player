@@ -6,9 +6,10 @@ use axum::routing::{get, post};
 use axum::{Json, Router};
 use player_core::{search, sort};
 use player_types::{
-    CountsResponse, MessageResponse, Mp3Params, Mp3Response, Mp3sResponse, PlaylistMp3MoveParams,
-    PlaylistMp3sResponse, PlaylistParams, PlaylistResponse, PlaylistsResponse, QueuedMp3Params,
-    QueuedMp3sResponse, SessionParams, SourceParams, SourceResponse, SourcesResponse,
+    AlbumsResponse, ArtistsResponse, CountsResponse, MessageResponse, Mp3Params, Mp3Response,
+    Mp3sResponse, PlaylistMp3MoveParams, PlaylistMp3sResponse, PlaylistParams, PlaylistResponse,
+    PlaylistsResponse, QueuedMp3Params, QueuedMp3sResponse, SessionParams, SourceParams,
+    SourceResponse, SourcesResponse,
 };
 use serde::Deserialize;
 use serde_json::{Value, json};
@@ -19,7 +20,7 @@ use tower_sessions::Session;
 use crate::app::AppState;
 use crate::error::{AppError, AppResult};
 use crate::params::Params;
-use crate::{mp3s, playlist_mp3s, playlists, queue, sources, users};
+use crate::{library, mp3s, playlist_mp3s, playlists, queue, sources, users};
 
 pub const USER_ID: &str = "user_id";
 
@@ -29,6 +30,8 @@ pub fn api(state: AppState) -> Router<AppState> {
         .route("/counts", get(counts))
         .route("/mp3s", get(mp3s_index))
         .route("/mp3s/search", get(mp3s_search))
+        .route("/albums", get(albums_index))
+        .route("/artists", get(artists_index))
         .route(
             "/mp3s/{id}",
             get(mp3s_show).put(mp3s_update).patch(mp3s_update),
@@ -176,6 +179,26 @@ async fn mp3s_search(
     let mp3s = mp3s::search(&state.pool, &search, sort::parse(query.sort.as_deref())).await?;
 
     Ok(Json(Mp3sResponse { mp3s }))
+}
+
+async fn albums_index(
+    State(state): State<AppState>,
+    Query(query): Query<ListQuery>,
+) -> AppResult<Json<AlbumsResponse>> {
+    let search = search::parse(query.q.as_deref().unwrap_or_default());
+    let albums = library::albums(&state.pool, &search).await?;
+
+    Ok(Json(AlbumsResponse { albums }))
+}
+
+async fn artists_index(
+    State(state): State<AppState>,
+    Query(query): Query<ListQuery>,
+) -> AppResult<Json<ArtistsResponse>> {
+    let search = search::parse(query.q.as_deref().unwrap_or_default());
+    let artists = library::artists(&state.pool, &search).await?;
+
+    Ok(Json(ArtistsResponse { artists }))
 }
 
 async fn mp3s_show(

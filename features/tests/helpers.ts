@@ -101,6 +101,66 @@ export function currentQueueRow(page: Page) {
   return page.locator("#queue tr.table-primary");
 }
 
+/// What the player's display shows: "playing", "paused", or "stopped".
+export async function transport(page: Page) {
+  const classes = (await page.locator("#player-state").getAttribute("class")) ?? "";
+  return classes.includes("bi-play-fill") ? "playing" : classes.includes("bi-pause-fill") ? "paused" : "stopped";
+}
+
+/// Seconds into the current song, from the seek bar.
+export async function position(page: Page) {
+  return Number(await page.locator("#player-seek").inputValue());
+}
+
+/// The current song's length in seconds, once it has loaded.
+export async function songLength(page: Page) {
+  await expect.poll(async () => Number(await page.locator("#player-seek").getAttribute("max"))).toBeGreaterThan(0);
+  return Number(await page.locator("#player-seek").getAttribute("max"));
+}
+
+/// Waits until the current song is loaded and playing.
+export async function waitUntilPlaying(page: Page) {
+  await songLength(page);
+  await expect.poll(() => transport(page)).toBe("playing");
+  await expect.poll(() => position(page)).toBeGreaterThan(0);
+}
+
+/// Lets the playing song run to its end by seeking to just before it.
 export async function endTrack(page: Page) {
-  await page.locator("audio").evaluate((audio) => audio.dispatchEvent(new Event("ended")));
+  const length = await songLength(page);
+  await page.locator("#player-seek").fill((length - 0.3).toFixed(2));
+}
+
+/// A 16-bit mono WAV of a 440 Hz tone.
+export function toneWav(seconds: number) {
+  const sampleRate = 44100;
+  const samples = sampleRate * seconds;
+  const wav = Buffer.alloc(44 + samples * 2);
+
+  wav.write("RIFF", 0);
+  wav.writeUInt32LE(36 + samples * 2, 4);
+  wav.write("WAVE", 8);
+  wav.write("fmt ", 12);
+  wav.writeUInt32LE(16, 16);
+  wav.writeUInt16LE(1, 20);
+  wav.writeUInt16LE(1, 22);
+  wav.writeUInt32LE(sampleRate, 24);
+  wav.writeUInt32LE(sampleRate * 2, 28);
+  wav.writeUInt16LE(2, 32);
+  wav.writeUInt16LE(16, 34);
+  wav.write("data", 36);
+  wav.writeUInt32LE(samples * 2, 40);
+  for (let index = 0; index < samples; index += 1) {
+    wav.writeInt16LE(Math.round(Math.sin((2 * Math.PI * 440 * index) / sampleRate) * 20000), 44 + index * 2);
+  }
+
+  return wav;
+}
+
+/// Serves a tone for every song, since the demo library's MP3s are silent.
+export async function serveTone(page: Page, seconds = 5) {
+  const wav = toneWav(seconds);
+  await page.route(/\/api\/mp3s\/\d+\/play$/, (route) =>
+    route.fulfill({ status: 200, contentType: "audio/wav", body: wav }),
+  );
 }

@@ -6,14 +6,14 @@ import {
   logIn,
   mp3Id,
   mp3Row,
+  position,
   queueTitles,
   resetData,
+  songLength,
   sql,
+  transport,
+  waitUntilPlaying,
 } from "./helpers";
-
-function audioTime(page: import("@playwright/test").Page) {
-  return page.locator("#player-audio").evaluate((audio: HTMLAudioElement) => audio.currentTime);
-}
 
 test.beforeEach(async ({ page, request }) => {
   await resetData(request);
@@ -30,7 +30,7 @@ test("enqueuing a song starts playing it", async ({ page }) => {
   await enqueue(page, "Encore");
 
   await expect(currentQueueRow(page)).toContainText("Encore");
-  await expect(page.locator("audio")).toHaveAttribute("src", `/api/mp3s/${await mp3Id("Encore")}/play`);
+  await waitUntilPlaying(page);
   await expect(page).toHaveTitle("Other Band: Encore");
 });
 
@@ -88,7 +88,7 @@ test("the end of the last track stops playback", async ({ page }) => {
   await endTrack(page);
 
   await expect.poll(() => queueTitles(page)).toEqual([]);
-  await expect(page.locator("audio")).toHaveCount(0);
+  await expect.poll(() => transport(page)).toBe("stopped");
   await expect(page).toHaveTitle("Player");
 });
 
@@ -114,7 +114,7 @@ test("removing the playing entry stops playback and keeps the rest", async ({ pa
 
   await expect.poll(() => queueTitles(page)).toEqual(["Opening Song"]);
   await expect(page.locator("#player-title")).toHaveText("Nothing playing");
-  await expect(page.locator("#player-audio")).toHaveCount(0);
+  await expect.poll(() => transport(page)).toBe("stopped");
   await expect(currentQueueRow(page)).toHaveCount(0);
 });
 
@@ -140,13 +140,13 @@ test("double-clicking a playlist row plays that entry and keeps the others", asy
 
 test("double-clicking the playing row starts it over", async ({ page }) => {
   await enqueue(page, "Encore");
-  await expect(page.locator("#player-duration")).toHaveText(/^1:0\d$/);
+  await songLength(page);
   await page.locator("#player-seek").fill("30");
-  await expect.poll(() => audioTime(page)).toBeGreaterThanOrEqual(30);
+  await expect.poll(() => position(page)).toBeGreaterThanOrEqual(30);
 
   await currentQueueRow(page).dblclick();
 
-  await expect.poll(() => audioTime(page)).toBeLessThan(5);
+  await expect.poll(() => position(page)).toBeLessThan(5);
 });
 
 test("enqueuing after stop plays the newly added song", async ({ page }) => {

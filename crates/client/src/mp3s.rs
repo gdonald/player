@@ -2,17 +2,21 @@ use gloo_timers::future::TimeoutFuture;
 use leptos::ev::MouseEvent;
 use leptos::prelude::*;
 use leptos::task::spawn_local;
+use player_core::views::ListMode;
 use player_core::{names, paths, selection, sort};
 use player_types::{
-    FieldErrors, FlexId, Mp3, Mp3Params, Mp3Response, Mp3sResponse, PlaylistListItem,
-    PlaylistMp3Attributes, PlaylistParams, PlaylistResponse, PlaylistsResponse, wrap,
+    AlbumListItem, AlbumsResponse, ArtistListItem, ArtistsResponse, FieldErrors, FlexId, Mp3,
+    Mp3Params, Mp3Response, Mp3sResponse, PlaylistListItem, PlaylistMp3Attributes, PlaylistParams,
+    PlaylistResponse, PlaylistsResponse, wrap,
 };
 use serde_json::Value;
 
 use crate::api::{self, errors_for};
 use crate::state::{Ctx, Page, ctx};
+use crate::storage;
 
 const SEARCH_DEBOUNCE_MILLISECONDS: u32 = 500;
+const MODE_KEY: &str = "player.mp3s.mode";
 
 fn attributes(mp3_ids: &[i64]) -> Vec<PlaylistMp3Attributes> {
     mp3_ids
@@ -36,6 +40,9 @@ fn load_playlists(ctx: Ctx, playlists: RwSignal<Vec<PlaylistListItem>>) {
 pub fn Mp3s() -> impl IntoView {
     let ctx = ctx();
     let mp3s = RwSignal::new(Vec::<Mp3>::new());
+    let albums = RwSignal::new(Vec::<AlbumListItem>::new());
+    let artists = RwSignal::new(Vec::<ArtistListItem>::new());
+    let mode = RwSignal::new(ListMode::parse(storage::get(MODE_KEY).as_deref()));
     let playlists = RwSignal::new(Vec::<PlaylistListItem>::new());
     let sort_by = RwSignal::new(None::<String>);
     let selected = RwSignal::new(Vec::<i64>::new());
@@ -43,22 +50,54 @@ pub fn Mp3s() -> impl IntoView {
     let search_text = RwSignal::new(ctx.query.get_untracked().unwrap_or_default());
     let typing = StoredValue::new(0_u64);
 
-    let load = move || {
-        let url = paths::mp3s(
-            ctx.query.get_untracked().as_deref(),
-            sort_by.get_untracked().as_deref(),
-        );
+    Effect::new(move |_| storage::set(MODE_KEY, mode.get().name()));
 
-        spawn_local(async move {
-            let _waiting = ctx.wait();
-            match api::get::<Mp3sResponse>(&url).await {
-                Ok(body) => {
-                    selected.set(Vec::new());
-                    mp3s.set(body.mp3s);
-                }
-                Err(error) => ctx.fail(&error),
+    let load = move || {
+        let query = ctx.query.get_untracked();
+        let query = query.as_deref();
+        let sort = sort_by.get_untracked();
+
+        match mode.get_untracked() {
+            ListMode::Songs => {
+                let url = paths::mp3s(query, sort.as_deref());
+                spawn_local(async move {
+                    let _waiting = ctx.wait();
+                    match api::get::<Mp3sResponse>(&url).await {
+                        Ok(body) => {
+                            selected.set(Vec::new());
+                            mp3s.set(body.mp3s);
+                        }
+                        Err(error) => ctx.fail(&error),
+                    }
+                });
             }
-        });
+            ListMode::Albums => {
+                let url = paths::albums(query);
+                spawn_local(async move {
+                    let _waiting = ctx.wait();
+                    match api::get::<AlbumsResponse>(&url).await {
+                        Ok(body) => albums.set(body.albums),
+                        Err(error) => ctx.fail(&error),
+                    }
+                });
+            }
+            ListMode::Artists => {
+                let url = paths::artists(query);
+                spawn_local(async move {
+                    let _waiting = ctx.wait();
+                    match api::get::<ArtistsResponse>(&url).await {
+                        Ok(body) => artists.set(body.artists),
+                        Err(error) => ctx.fail(&error),
+                    }
+                });
+            }
+        }
+    };
+
+    let choose_mode = move |choice: ListMode| {
+        selected.set(Vec::new());
+        mode.set(choice);
+        load();
     };
 
     let search = move |query: String| {
@@ -116,18 +155,213 @@ pub fn Mp3s() -> impl IntoView {
     let visible_ids = move || mp3s.with(|list| list.iter().map(|mp3| mp3.id).collect::<Vec<_>>());
     let search = Callback::new(search);
 
+    // A click on an album or artist: switch the list and search for it.
+    let show = move |choice: ListMode, query: String| {
+        selected.set(Vec::new());
+        mode.set(choice);
+        search.run(query);
+    };
+
+    let songs = move || {
+        view! {
+            <Show
+                when=move || !mp3s.with(Vec::is_empty)
+                fallback=|| view! { <p class="text-center pt-5">"No mp3s found."</p> }
+            >
+                <table class="table table-striped table-hover" id="mp3s">
+                    <thead>
+                        <tr>
+                            <th class="tight">
+                                <input
+                                    type="checkbox"
+                                    id="select-all"
+                                    prop:checked=move || {
+                                        selected.with(|ids| selection::all_selected(ids, &visible_ids()))
+                                    }
+                                    on:change=move |event| {
+                                        selected.set(selection::select_all(event_target_checked(&event), &visible_ids()));
+                                    }
+                                />
+                            </th>
+                            <th>{sort_header("title", "Title")}</th>
+                            <th class="col-album">{sort_header("album", "Album")}</th>
+                            <th class="text-center col-track">{sort_header("track", "Track")}</th>
+                            <th>{sort_header("artist", "Artist")}</th>
+                            <th></th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <For
+                            each=move || mp3s.get()
+                            key=Mp3::clone
+                            children=move |mp3| {
+                                view! {
+                                    <Mp3Row
+                                        mp3=mp3
+                                        selected=selected
+                                        playlists=playlists
+                                        open_menu=open_menu
+                                        search=search
+                                    />
+                                }
+                            }
+                        />
+                    </tbody>
+                </table>
+            </Show>
+        }
+    };
+
+    let album_list = move || {
+        view! {
+            <Show
+                when=move || !albums.with(Vec::is_empty)
+                fallback=|| view! { <p class="text-center pt-5">"No albums found."</p> }
+            >
+                <table class="table table-striped table-hover" id="albums">
+                    <thead>
+                        <tr>
+                            <th>"Album"</th>
+                            <th>"Artist"</th>
+                            <th class="text-center tight">"Songs"</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <For
+                            each=move || albums.get()
+                            key=AlbumListItem::clone
+                            children=move |album| {
+                                let artist_filter = paths::filter_query("artist", &album.artist_name);
+                                let album_songs = format!("{artist_filter} {}", paths::filter_query("album", &album.name));
+                                view! {
+                                    <tr class="align-middle" id=format!("album-{}", album.id)>
+                                        <td>
+                                            <a
+                                                href="#"
+                                                class="show-album"
+                                                on:click=move |event: MouseEvent| {
+                                                    event.prevent_default();
+                                                    show(ListMode::Songs, album_songs.clone());
+                                                }
+                                            >
+                                                {album.name}
+                                            </a>
+                                        </td>
+                                        <td>
+                                            <a
+                                                href="#"
+                                                class="show-artist"
+                                                on:click=move |event: MouseEvent| {
+                                                    event.prevent_default();
+                                                    show(ListMode::Songs, artist_filter.clone());
+                                                }
+                                            >
+                                                {album.artist_name}
+                                            </a>
+                                        </td>
+                                        <td class="text-center">{album.mp3s_count}</td>
+                                    </tr>
+                                }
+                            }
+                        />
+                    </tbody>
+                </table>
+            </Show>
+        }
+    };
+
+    let artist_list = move || {
+        view! {
+            <Show
+                when=move || !artists.with(Vec::is_empty)
+                fallback=|| view! { <p class="text-center pt-5">"No artists found."</p> }
+            >
+                <table class="table table-striped table-hover" id="artists">
+                    <thead>
+                        <tr>
+                            <th>"Artist"</th>
+                            <th class="text-center tight">"Albums"</th>
+                            <th class="text-center tight">"Songs"</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <For
+                            each=move || artists.get()
+                            key=ArtistListItem::clone
+                            children=move |artist| {
+                                let artist_filter = paths::filter_query("artist", &artist.name);
+                                let albums_filter = artist_filter.clone();
+                                view! {
+                                    <tr class="align-middle" id=format!("artist-{}", artist.id)>
+                                        <td>
+                                            <a
+                                                href="#"
+                                                class="show-artist"
+                                                on:click=move |event: MouseEvent| {
+                                                    event.prevent_default();
+                                                    show(ListMode::Songs, artist_filter.clone());
+                                                }
+                                            >
+                                                {artist.name}
+                                            </a>
+                                        </td>
+                                        <td class="text-center">
+                                            <a
+                                                href="#"
+                                                class="show-albums"
+                                                on:click=move |event: MouseEvent| {
+                                                    event.prevent_default();
+                                                    show(ListMode::Albums, albums_filter.clone());
+                                                }
+                                            >
+                                                {artist.albums_count}
+                                            </a>
+                                        </td>
+                                        <td class="text-center">{artist.mp3s_count}</td>
+                                    </tr>
+                                }
+                            }
+                        />
+                    </tbody>
+                </table>
+            </Show>
+        }
+    };
+
     view! {
         <div class="container-fluid">
-            <nav aria-label="breadcrumb">
-                <ol class="breadcrumb">
-                    <li class="breadcrumb-item" aria-current="page">
-                        <b>
-                            <i class="bi-music-note-beamed"></i>
-                            " MP3s"
-                        </b>
-                    </li>
-                </ol>
-            </nav>
+            <div class="mp3s-header">
+                <nav aria-label="breadcrumb">
+                    <ol class="breadcrumb">
+                        <li class="breadcrumb-item" aria-current="page">
+                            <b>
+                                <i class="bi-music-note-beamed"></i>
+                                " MP3s"
+                            </b>
+                        </li>
+                    </ol>
+                </nav>
+                <div class="btn-group btn-group-sm list-modes" role="group" aria-label="List">
+                    {ListMode::ALL
+                        .into_iter()
+                        .map(|choice| {
+                            view! {
+                                <button
+                                    type="button"
+                                    class=move || {
+                                        if mode.get() == choice { "btn btn-sm btn-primary active" } else { "btn btn-sm btn-primary" }
+                                    }
+                                    id=format!("list-{}", choice.name())
+                                    aria-pressed=move || (mode.get() == choice).to_string()
+                                    on:click=move |_: MouseEvent| choose_mode(choice)
+                                >
+                                    {choice.label()}
+                                </button>
+                            }
+                        })
+                        .collect_view()}
+                </div>
+            </div>
             <div class="search">
                 <form on:submit=|event| event.prevent_default() class="px-0">
                     <div class="input-group mb-0">
@@ -153,51 +387,11 @@ pub fn Mp3s() -> impl IntoView {
                 <PlaylistsForm selected=selected playlists=playlists />
             </Show>
             <div class="list mt-2">
-                <Show
-                    when=move || !mp3s.with(Vec::is_empty)
-                    fallback=|| view! { <p class="text-center pt-5">"No mp3s found."</p> }
-                >
-                    <table class="table table-striped table-hover" id="mp3s">
-                        <thead>
-                            <tr>
-                                <th class="tight">
-                                    <input
-                                        type="checkbox"
-                                        id="select-all"
-                                        prop:checked=move || {
-                                            selected.with(|ids| selection::all_selected(ids, &visible_ids()))
-                                        }
-                                        on:change=move |event| {
-                                            selected.set(selection::select_all(event_target_checked(&event), &visible_ids()));
-                                        }
-                                    />
-                                </th>
-                                <th>{sort_header("title", "Title")}</th>
-                                <th class="col-album">{sort_header("album", "Album")}</th>
-                                <th class="text-center col-track">{sort_header("track", "Track")}</th>
-                                <th>{sort_header("artist", "Artist")}</th>
-                                <th></th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            <For
-                                each=move || mp3s.get()
-                                key=Mp3::clone
-                                children=move |mp3| {
-                                    view! {
-                                        <Mp3Row
-                                            mp3=mp3
-                                            selected=selected
-                                            playlists=playlists
-                                            open_menu=open_menu
-                                            search=search
-                                        />
-                                    }
-                                }
-                            />
-                        </tbody>
-                    </table>
-                </Show>
+                {move || match mode.get() {
+                    ListMode::Songs => songs().into_any(),
+                    ListMode::Albums => album_list().into_any(),
+                    ListMode::Artists => artist_list().into_any(),
+                }}
             </div>
         </div>
     }

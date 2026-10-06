@@ -1,5 +1,5 @@
-use sqlx::PgPool;
 use sqlx::postgres::PgPoolOptions;
+use sqlx::{PgPool, Postgres, QueryBuilder};
 use tower_sessions_sqlx_store::PostgresStore;
 
 pub async fn connect(url: &str) -> sqlx::Result<PgPool> {
@@ -17,6 +17,39 @@ pub fn is_unique_violation(error: &sqlx::Error) -> bool {
     error
         .as_database_error()
         .is_some_and(sqlx::error::DatabaseError::is_unique_violation)
+}
+
+/// Adds ` AND (...)` matching rows where some field contains every search
+/// part, case-insensitively. Adds nothing for a search with no parts.
+pub fn push_search_parts(
+    builder: &mut QueryBuilder<'_, Postgres>,
+    fields: &[&str],
+    parts: &[String],
+) {
+    if parts.is_empty() {
+        return;
+    }
+
+    builder.push(" AND (");
+
+    for (field_index, field) in fields.iter().enumerate() {
+        if field_index > 0 {
+            builder.push(" OR ");
+        }
+        builder.push("(");
+
+        for (part_index, part) in parts.iter().enumerate() {
+            if part_index > 0 {
+                builder.push(" AND ");
+            }
+            builder.push(format!("{field} ILIKE "));
+            builder.push_bind(format!("%{}%", escape_like(part)));
+        }
+
+        builder.push(")");
+    }
+
+    builder.push(")");
 }
 
 /// Escapes `%`, `_`, and `\` so a value matches literally under `ILIKE`.

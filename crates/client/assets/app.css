@@ -483,6 +483,19 @@ body,
   margin-bottom: 0.5rem;
 }
 
+.mp3s-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.list-modes .btn {
+  padding: 0 6px;
+  font-size: 10px;
+  line-height: 18px;
+}
+
 .table a {
   text-decoration: none;
 }

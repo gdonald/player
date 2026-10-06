@@ -1,6 +1,6 @@
 import { Page } from "@playwright/test";
 import { expect, test } from "./fixtures";
-import { logIn, mp3Row, queueTitles, resetData } from "./helpers";
+import { logIn, mp3Row, queueTitles, resetData, serveTone } from "./helpers";
 
 test.beforeEach(async ({ page, request }) => {
   await resetData(request);
@@ -24,40 +24,6 @@ function barPixels(page: Page) {
   });
 }
 
-/// Swaps the playing element's source for a generated 440 Hz tone, so the
-/// analyzer has sound to show. The demo library's MP3s are silent.
-async function playTone(page: Page) {
-  await page.locator("#player-audio").evaluate(async (audio: HTMLAudioElement) => {
-    const sampleRate = 44100;
-    const seconds = 5;
-    const samples = sampleRate * seconds;
-    const buffer = new ArrayBuffer(44 + samples * 2);
-    const view = new DataView(buffer);
-    const text = (offset: number, value: string) =>
-      [...value].forEach((character, index) => view.setUint8(offset + index, character.charCodeAt(0)));
-
-    text(0, "RIFF");
-    view.setUint32(4, 36 + samples * 2, true);
-    text(8, "WAVE");
-    text(12, "fmt ");
-    view.setUint32(16, 16, true);
-    view.setUint16(20, 1, true);
-    view.setUint16(22, 1, true);
-    view.setUint32(24, sampleRate, true);
-    view.setUint32(28, sampleRate * 2, true);
-    view.setUint16(32, 2, true);
-    view.setUint16(34, 16, true);
-    text(36, "data");
-    view.setUint32(40, samples * 2, true);
-    for (let index = 0; index < samples; index += 1) {
-      view.setInt16(44 + index * 2, Math.sin((2 * Math.PI * 440 * index) / sampleRate) * 20000, true);
-    }
-
-    audio.src = URL.createObjectURL(new Blob([buffer], { type: "audio/wav" }));
-    await audio.play();
-  });
-}
-
 test("the analyzer sits under the equalizer, which sits under the playlist", async ({ page }) => {
   const playlist = await page.locator(".playlist").boundingBox();
   const equalizer = await page.locator(".equalizer").boundingBox();
@@ -74,11 +40,10 @@ test("the analyzer shows no bars while nothing plays", async ({ page }) => {
 });
 
 test("the analyzer shows bars for playing sound", async ({ page }, testInfo) => {
+  await serveTone(page);
+
   await mp3Row(page, "Encore").locator(".play-mp3").click();
   await expect.poll(() => queueTitles(page)).toEqual(["Encore"]);
-  await expect(page.locator("#player-audio")).toHaveCount(1);
-
-  await playTone(page);
 
   await expect.poll(() => barPixels(page), { timeout: 10_000 }).toBeGreaterThan(50);
 
@@ -88,10 +53,9 @@ test("the analyzer shows bars for playing sound", async ({ page }, testInfo) => 
 test("the analyzer still shows bars through a boosted equalizer", async ({ page }) => {
   await page.click("#equalizer-toggle");
   await page.selectOption("#equalizer-preset", "Bass Boost");
-  await mp3Row(page, "Encore").locator(".play-mp3").click();
-  await expect(page.locator("#player-audio")).toHaveCount(1);
+  await serveTone(page);
 
-  await playTone(page);
+  await mp3Row(page, "Encore").locator(".play-mp3").click();
 
   await expect.poll(() => barPixels(page), { timeout: 10_000 }).toBeGreaterThan(50);
 });
@@ -114,10 +78,9 @@ function slatePixels(page: Page) {
 
 test("the charcoal theme draws the analyzer in slate with no green or red", async ({ page }, testInfo) => {
   await page.selectOption("#theme-select", "charcoal");
-  await mp3Row(page, "Encore").locator(".play-mp3").click();
-  await expect(page.locator("#player-audio")).toHaveCount(1);
+  await serveTone(page);
 
-  await playTone(page);
+  await mp3Row(page, "Encore").locator(".play-mp3").click();
 
   await expect.poll(() => slatePixels(page), { timeout: 10_000 }).toBeGreaterThan(50);
   expect(await barPixels(page)).toBe(0);

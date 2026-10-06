@@ -5,10 +5,10 @@ use player_core::playback;
 use wasm_bindgen::JsCast;
 use wasm_bindgen::closure::Closure;
 use web_sys::{
-    HtmlMediaElement, MediaMetadata, MediaMetadataInit, MediaSession, MediaSessionAction,
-    MediaSessionPlaybackState,
+    MediaMetadata, MediaMetadataInit, MediaSession, MediaSessionAction, MediaSessionPlaybackState,
 };
 
+use crate::audio_graph::Transport;
 use crate::state::ctx;
 use crate::storage;
 
@@ -38,10 +38,6 @@ fn media_session() -> Option<MediaSession> {
     present.then(|| navigator.media_session())
 }
 
-fn media_target(event: &Event) -> HtmlMediaElement {
-    event_target::<HtmlMediaElement>(event)
-}
-
 fn range_value(event: &Event) -> f64 {
     event_target_value(event).parse().unwrap_or(0.0)
 }
@@ -57,30 +53,21 @@ fn progress_style(percent: f64) -> String {
     format!("--progress: {percent}%")
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-enum Transport {
-    Playing,
-    Paused,
-    Stopped,
-}
-
-impl Transport {
-    fn icon(self) -> &'static str {
-        match self {
-            Transport::Playing => "bi-play-fill",
-            Transport::Paused => "bi-pause-fill",
-            Transport::Stopped => "bi-stop-fill",
-        }
+fn transport_icon(transport: Transport) -> &'static str {
+    match transport {
+        Transport::Playing => "bi-play-fill",
+        Transport::Paused => "bi-pause-fill",
+        Transport::Stopped => "bi-stop-fill",
     }
 }
 
 #[component]
 pub fn Player() -> impl IntoView {
     let ctx = ctx();
-    let audio = ctx.audio;
-    let transport = RwSignal::new(Transport::Stopped);
+    let engine = ctx.engine;
+    let transport = engine.transport;
+    let duration = engine.duration;
     let position = RwSignal::new(0.0_f64);
-    let duration = RwSignal::new(0.0_f64);
     let volume = RwSignal::new(playback::parse_volume(stored_volume().as_deref()));
     let muted = RwSignal::new(false);
 
@@ -88,77 +75,44 @@ pub fn Player() -> impl IntoView {
     let has_queue = move || ctx.queue.with(|queue| !queue.is_empty());
 
     let seek_to = move |seconds: f64| {
-        ctx.with_audio(|element| {
-            element.set_current_time(seconds);
-            position.set(seconds);
-        });
+        engine.seek(seconds);
+        position.set(engine.position());
     };
 
     // Play starts a stopped queue, resumes a paused track, and restarts a
     // playing one, as Winamp's play button did.
-    let play = move || match audio.get_untracked() {
-        None => ctx.start_if_idle(),
-        Some(element) => {
-            if !element.paused() {
-                seek_to(0.0);
-            }
-            element.play().ok();
-        }
+    let play = move || match (has_track(), transport.get_untracked()) {
+        (false, _) => ctx.start_if_idle(),
+        (true, Transport::Playing) => seek_to(0.0),
+        (true, Transport::Paused | Transport::Stopped) => engine.resume(),
     };
 
     let pause = move || {
-        ctx.with_audio(|element| {
-            element.pause().ok();
-        });
+        if transport.get_untracked() == Transport::Playing {
+            engine.pause();
+        }
     };
 
     // Pause toggles between paused and playing.
-    let toggle_pause = move || {
-        ctx.with_audio(|element| {
-            if element.paused() {
-                element.play().ok();
-            } else {
-                element.pause().ok();
-            }
-        });
-    };
+    let toggle_pause = move || engine.toggle_pause();
 
     let stop = move || {
-        ctx.with_audio(|element| {
-            element.pause().ok();
-            seek_to(0.0);
-            transport.set(Transport::Stopped);
-        });
+        engine.stop();
+        position.set(0.0);
     };
 
     let restart = move || seek_to(0.0);
 
     Effect::new(move |_| {
-        if let Some(element) = audio.get() {
-            element.set_volume(volume.get());
-            element.set_muted(muted.get());
-        }
+        let level = if muted.get() { 0.0 } else { volume.get() };
+        #[allow(clippy::cast_possible_truncation, reason = "a volume between 0 and 1")]
+        engine.set_volume(level as f32);
     });
 
-    Effect::new(move |_| {
-        if ctx.src.with(Option::is_none) {
-            transport.set(Transport::Stopped);
-            position.set(0.0);
-            duration.set(0.0);
-        }
-    });
-
-    // The `timeupdate` event comes about four times a second, so the seek bar
-    // also reads the position at the frame rate while a track plays.
-    let follow = set_interval_with_handle(
-        move || {
-            if transport.get_untracked() == Transport::Playing {
-                ctx.with_audio(|element| position.set(element.current_time()));
-            }
-        },
-        POSITION_FRAME,
-    )
-    .expect("the browser runs intervals");
+    // The engine knows the position at any moment, so the seek bar and the
+    // clock read it at the frame rate.
+    let follow = set_interval_with_handle(move || position.set(engine.position()), POSITION_FRAME)
+        .expect("the browser runs intervals");
     on_cleanup(move || follow.clear());
 
     let space_toggles = window_event_listener(leptos::ev::keydown, move |event: KeyboardEvent| {
@@ -301,7 +255,7 @@ pub fn Player() -> impl IntoView {
             </div>
             <div class="player-body">
                 <div class="player-lcd" id="player-lcd">
-                    <i class=move || format!("player-state {}", transport.get().icon()) id="player-state"></i>
+                    <i class=move || format!("player-state {}", transport_icon(transport.get())) id="player-state"></i>
                     <span class="player-clock" id="player-position">
                         {move || playback::format_time(position.get())}
                     </span>
@@ -430,29 +384,6 @@ pub fn Player() -> impl IntoView {
                     </button>
                 </div>
             </div>
-            <Show when=move || ctx.src.with(Option::is_some)>
-                <audio
-                    node_ref=audio
-                    id="player-audio"
-                    autoplay=true
-                    preload="auto"
-                    src=move || ctx.src.get().unwrap_or_default()
-                    on:play=move |_| transport.set(Transport::Playing)
-                    on:pause=move |event| {
-                        let element = media_target(&event);
-                        let at_start = element.current_time() <= 0.0;
-                        transport.set(if at_start { Transport::Stopped } else { Transport::Paused });
-                    }
-                    on:loadstart=move |_| {
-                        position.set(0.0);
-                        duration.set(0.0);
-                    }
-                    on:loadedmetadata=move |event| duration.set(media_target(&event).duration())
-                    on:durationchange=move |event| duration.set(media_target(&event).duration())
-                    on:timeupdate=move |event| position.set(media_target(&event).current_time())
-                    on:ended=move |_| ctx.advance()
-                ></audio>
-            </Show>
         </div>
     }
 }

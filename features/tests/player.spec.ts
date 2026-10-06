@@ -1,6 +1,17 @@
 import { Page } from "@playwright/test";
 import { expect, test } from "./fixtures";
-import { logIn, mp3Id, mp3Row, queueTitles, resetData, sql } from "./helpers";
+import {
+  logIn,
+  mp3Id,
+  mp3Row,
+  position,
+  queueTitles,
+  resetData,
+  sql,
+  songLength,
+  transport,
+  waitUntilPlaying,
+} from "./helpers";
 
 test.beforeEach(async ({ page, request }) => {
   await resetData(request);
@@ -13,16 +24,27 @@ async function play(page: Page, title: string) {
   await expect.poll(async () => (await queueTitles(page)).length).toBe(before + 1);
 }
 
-function audioProperty(page: Page, property: "paused" | "currentTime" | "volume" | "muted") {
-  return page.locator("#player-audio").evaluate((audio: HTMLAudioElement, name) => audio[name], property);
-}
-
 async function waitForLength(page: Page) {
+  await songLength(page);
   await expect(page.locator("#player-duration")).toHaveText(/^1:0\d$/);
 }
 
-async function waitUntilPlaying(page: Page) {
-  await expect.poll(() => audioProperty(page, "paused")).toBe(false);
+/// Keeps every gain node the page makes. The engine makes its volume first.
+async function captureVolume(page: Page) {
+  await page.addInitScript(() => {
+    const create = AudioContext.prototype.createGain;
+    AudioContext.prototype.createGain = function () {
+      const node = create.call(this);
+      const keeper = window as unknown as { gains?: GainNode[] };
+      (keeper.gains ??= []).push(node);
+      return node;
+    };
+  });
+  await page.reload();
+}
+
+function volumeLevel(page: Page) {
+  return page.evaluate(() => (window as unknown as { gains: GainNode[] }).gains[0].gain.value);
 }
 
 test("with nothing playing the controls are disabled", async ({ page }) => {
@@ -36,7 +58,6 @@ test("with nothing playing the controls are disabled", async ({ page }) => {
   await expect(page.locator("#player-position")).toHaveText("0:00");
   await expect(page.locator("#player-duration")).toHaveText("0:00");
   await expect(page.locator("#player-state")).toHaveClass(/bi-stop-fill/);
-  await expect(page.locator("audio[controls]")).toHaveCount(0);
 });
 
 test("the playing track shows its number, artist, title, length, and album", async ({ page }, testInfo) => {
@@ -56,7 +77,7 @@ test("pause pauses and resumes", async ({ page }) => {
 
   await page.click("#player-pause");
 
-  await expect.poll(() => audioProperty(page, "paused")).toBe(true);
+  await expect.poll(() => transport(page)).toBe("paused");
   await expect(page.locator("#player-state")).toHaveClass(/bi-pause-fill/);
 
   await page.click("#player-pause");
@@ -69,7 +90,7 @@ test("play resumes a paused track", async ({ page }) => {
   await play(page, "Encore");
   await waitUntilPlaying(page);
   await page.click("#player-pause");
-  await expect.poll(() => audioProperty(page, "paused")).toBe(true);
+  await expect.poll(() => transport(page)).toBe("paused");
 
   await page.click("#player-play");
 
@@ -80,12 +101,12 @@ test("stop pauses and returns to the start", async ({ page }) => {
   await play(page, "Encore");
   await waitForLength(page);
   await page.locator("#player-seek").fill("30");
-  await expect.poll(() => audioProperty(page, "currentTime")).toBeGreaterThanOrEqual(30);
+  await expect.poll(() => position(page)).toBeGreaterThanOrEqual(30);
 
   await page.click("#player-stop");
 
-  await expect.poll(() => audioProperty(page, "paused")).toBe(true);
-  await expect.poll(() => audioProperty(page, "currentTime")).toBe(0);
+  await expect.poll(() => transport(page)).toBe("stopped");
+  await expect.poll(() => position(page)).toBe(0);
   await expect(page.locator("#player-state")).toHaveClass(/bi-stop-fill/);
   await expect(page.locator("#player-position")).toHaveText("0:00");
 });
@@ -94,11 +115,11 @@ test("play on a playing track starts it over", async ({ page }) => {
   await play(page, "Encore");
   await waitForLength(page);
   await page.locator("#player-seek").fill("30");
-  await expect.poll(() => audioProperty(page, "currentTime")).toBeGreaterThanOrEqual(30);
+  await expect.poll(() => position(page)).toBeGreaterThanOrEqual(30);
 
   await page.click("#player-play");
 
-  await expect.poll(() => audioProperty(page, "currentTime")).toBeLessThan(5);
+  await expect.poll(() => position(page)).toBeLessThan(5);
   await waitUntilPlaying(page);
 });
 
@@ -107,7 +128,7 @@ test("the space bar pauses and resumes after clicking a title", async ({ page })
   await waitUntilPlaying(page);
 
   await page.keyboard.press(" ");
-  await expect.poll(() => audioProperty(page, "paused")).toBe(true);
+  await expect.poll(() => transport(page)).toBe("paused");
 
   await page.keyboard.press(" ");
   await waitUntilPlaying(page);
@@ -119,7 +140,7 @@ test("the space bar types in the search box", async ({ page }) => {
 
   await page.locator("#search").press(" ");
 
-  await expect.poll(() => audioProperty(page, "paused")).toBe(false);
+  await expect.poll(() => transport(page)).toBe("playing");
 });
 
 test("dragging the seek bar moves the playback position", async ({ page }) => {
@@ -128,7 +149,7 @@ test("dragging the seek bar moves the playback position", async ({ page }) => {
 
   await page.locator("#player-seek").fill("30");
 
-  await expect.poll(() => audioProperty(page, "currentTime")).toBeGreaterThanOrEqual(30);
+  await expect.poll(() => position(page)).toBeGreaterThanOrEqual(30);
   await expect(page.locator("#player-position")).toHaveText(/^0:3\d$/);
 });
 
@@ -138,7 +159,7 @@ test("the length display counts down the time left", async ({ page }) => {
 
   await page.locator("#player-seek").fill("30");
 
-  await expect.poll(() => audioProperty(page, "currentTime")).toBeGreaterThanOrEqual(30);
+  await expect.poll(() => position(page)).toBeGreaterThanOrEqual(30);
   await expect(page.locator("#player-duration")).toHaveText(/^0:3\d$/);
 });
 
@@ -146,11 +167,11 @@ test("restart returns to the start of the track", async ({ page }) => {
   await play(page, "Encore");
   await waitForLength(page);
   await page.locator("#player-seek").fill("30");
-  await expect.poll(() => audioProperty(page, "currentTime")).toBeGreaterThanOrEqual(30);
+  await expect.poll(() => position(page)).toBeGreaterThanOrEqual(30);
 
   await page.click("#player-restart");
 
-  await expect.poll(() => audioProperty(page, "currentTime")).toBeLessThan(5);
+  await expect.poll(() => position(page)).toBeLessThan(5);
 });
 
 test("next plays the following entry", async ({ page }) => {
@@ -185,35 +206,36 @@ test("next on the last entry stops playback", async ({ page }) => {
   await page.click("#player-next");
 
   await expect(page.locator("#player-title")).toHaveText("Nothing playing");
-  await expect(page.locator("#player-audio")).toHaveCount(0);
+  await expect.poll(() => transport(page)).toBe("stopped");
 });
 
 test("the volume slider sets the volume and is remembered", async ({ page }) => {
+  await captureVolume(page);
   await play(page, "Encore");
 
   await page.locator("#player-volume").fill("0.3");
 
-  await expect.poll(() => audioProperty(page, "volume")).toBeCloseTo(0.3);
+  await expect.poll(() => volumeLevel(page)).toBeCloseTo(0.3);
   await expect(page.locator("#player-mute i")).toHaveClass("bi-volume-down-fill");
 
   await page.reload();
   await expect(page.locator("#player-volume")).toHaveValue("0.3");
-  await page.click("#queue-play");
 
-  await expect.poll(() => audioProperty(page, "volume")).toBeCloseTo(0.3);
+  await expect.poll(() => volumeLevel(page)).toBeCloseTo(0.3);
 });
 
 test("the mute button mutes and unmutes", async ({ page }) => {
+  await captureVolume(page);
   await play(page, "Encore");
 
   await page.click("#player-mute");
 
-  await expect.poll(() => audioProperty(page, "muted")).toBe(true);
+  await expect.poll(() => volumeLevel(page)).toBe(0);
   await expect(page.locator("#player-mute i")).toHaveClass("bi-volume-mute-fill");
 
   await page.click("#player-mute");
 
-  await expect.poll(() => audioProperty(page, "muted")).toBe(false);
+  await expect.poll(() => volumeLevel(page)).toBe(1);
   await expect(page.locator("#player-mute i")).toHaveClass("bi-volume-up-fill");
 });
 
@@ -240,7 +262,7 @@ test("the space bar with nothing playing does nothing", async ({ page }) => {
   await page.locator("body").press("Space");
 
   await expect(page.locator("#player-title")).toHaveText("Nothing playing");
-  await expect(page.locator("#player-audio")).toHaveCount(0);
+  await expect.poll(() => transport(page)).toBe("stopped");
 });
 
 test("keys other than the space bar leave playback alone", async ({ page }) => {
@@ -249,5 +271,5 @@ test("keys other than the space bar leave playback alone", async ({ page }) => {
 
   await page.locator("body").press("a");
 
-  await expect.poll(() => audioProperty(page, "paused")).toBe(false);
+  await expect.poll(() => transport(page)).toBe("playing");
 });

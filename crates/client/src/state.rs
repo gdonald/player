@@ -1,12 +1,14 @@
 use leptos::prelude::*;
 use leptos::task::spawn_local;
-use player_core::{paths, queue};
+use player_core::queue;
 use player_types::{CountsResponse, FlexId, QueuedMp3, QueuedMp3Params, QueuedMp3sResponse, wrap};
 use serde_json::json;
-use web_sys::HtmlAudioElement;
 
 use crate::api::{self, ApiError};
+use crate::audio_graph::{Engine, Plan, Transport};
 use crate::storage;
+
+const AUDIO_UNAVAILABLE: &str = "This browser cannot play audio.";
 
 const QUERY_KEY: &str = "player.query";
 const MODE_KEY: &str = "player.mode";
@@ -21,7 +23,7 @@ pub enum Page {
     Source(i64),
 }
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Clone, Copy)]
 pub struct Ctx {
     pub authenticated: RwSignal<Option<bool>>,
     pub page: RwSignal<Page>,
@@ -30,9 +32,8 @@ pub struct Ctx {
     pub waiting: RwSignal<u32>,
     pub queue: RwSignal<Vec<QueuedMp3>>,
     pub current: RwSignal<Option<QueuedMp3>>,
-    pub src: RwSignal<Option<String>>,
-    /// The `<audio>` element, shared by the player and the equalizer.
-    pub audio: NodeRef<leptos::html::Audio>,
+    /// Plays the songs, shared by the player, the equalizer, and the analyzer.
+    pub engine: Engine,
     /// Play through, loop one song, or loop the playlist.
     pub mode: RwSignal<queue::Mode>,
     /// The library counts on the menu buttons.
@@ -62,8 +63,7 @@ impl Ctx {
             waiting: RwSignal::new(0),
             queue: RwSignal::new(Vec::new()),
             current: RwSignal::new(None),
-            src: RwSignal::new(None),
-            audio: NodeRef::new(),
+            engine: Engine::new(),
             mode: RwSignal::new(queue::Mode::parse(storage::get(MODE_KEY).as_deref())),
             counts: RwSignal::new(None),
         }
@@ -119,36 +119,85 @@ impl Ctx {
             .with_untracked(|entries| entries.iter().find(|entry| entry.id == id).cloned())
     }
 
-    /// Runs `act` on the `<audio>` element, which exists while a song is
-    /// loaded.
-    pub fn with_audio(&self, act: impl FnOnce(&HtmlAudioElement)) {
-        if let Some(element) = self.audio.get_untracked() {
-            act(&element);
-        }
-    }
-
     fn restart(&self) {
-        self.with_audio(|element| {
-            element.set_current_time(0.0);
-            element.play().ok();
-        });
+        self.engine.replay();
     }
 
     fn play(&self, entry: Option<QueuedMp3>) {
-        let src = entry.as_ref().map(|entry| paths::play(entry.mp3.id));
-
-        // The same song queued twice has the same source, which the element
-        // would not reload.
-        if src.is_some() && self.src.with_untracked(|current| *current == src) {
-            self.restart();
-        }
-        self.src.set(src);
-
-        if let Some(mp3_id) = entry.as_ref().map(|entry| entry.mp3.id) {
-            self.record_played(mp3_id);
+        match &entry {
+            Some(_) if !self.engine.available() => {
+                self.message.set(AUDIO_UNAVAILABLE.to_string());
+                return;
+            }
+            Some(chosen) => {
+                self.engine.play(chosen.mp3.id);
+                self.record_played(chosen.mp3.id);
+            }
+            None => self.engine.clear(),
         }
 
         self.current.set(entry);
+    }
+
+    /// Keeps the engine told which entry follows the current one, and moves
+    /// the queue on when a song ends.
+    pub fn follow_engine(&self) {
+        let ctx = *self;
+
+        Effect::new(move |_| {
+            let ids: Vec<i64> = ctx
+                .queue
+                .with(|entries| entries.iter().map(|entry| entry.id).collect());
+            let current = ctx.current.get();
+            let step =
+                queue::finished(&ids, current.as_ref().map(|entry| entry.id), ctx.mode.get());
+
+            let next = if step.restart {
+                current
+            } else {
+                step.play.and_then(|id| ctx.entry(id))
+            };
+            ctx.engine.prepare(next.map(|entry| Plan {
+                entry_id: entry.id,
+                mp3_id: entry.mp3.id,
+            }));
+        });
+
+        Effect::new(move |_| {
+            if let Some(ended) = ctx.engine.ended.get() {
+                ctx.finished(ended.started);
+            }
+        });
+
+        Effect::new(move |_| {
+            if let Some(error) = ctx.engine.failure.get() {
+                ctx.fail(&error);
+            }
+        });
+    }
+
+    /// A song ended. When the engine had the next entry decoded, that entry
+    /// is already playing, so the queue follows it. Otherwise the play mode
+    /// decides what comes next, as it would for a song that ended on its own.
+    fn finished(&self, started: Option<Plan>) {
+        let Some(plan) = started else {
+            self.advance();
+            return;
+        };
+
+        let step = queue::finished(
+            &self.queue_ids(),
+            self.current_id(),
+            self.mode.get_untracked(),
+        );
+        if self.current_id() != Some(plan.entry_id) {
+            self.record_played(plan.mp3_id);
+        }
+        self.current.set(self.entry(plan.entry_id));
+
+        if let Some(id) = step.remove {
+            self.delete_entry(id);
+        }
     }
 
     fn record_played(&self, mp3_id: i64) {
@@ -189,13 +238,9 @@ impl Ctx {
     }
 
     /// Nothing loaded, stopped, or finished. A song paused partway through
-    /// is not stopped. With nothing loaded the `<audio>` element is gone, but
-    /// its `NodeRef` can still hold it, paused where it was.
+    /// is not stopped.
     fn is_stopped(&self) -> bool {
-        self.src.with_untracked(Option::is_none)
-            || self.audio.get_untracked().is_none_or(|element| {
-                element.paused() && (element.current_time() <= 0.0 || element.ended())
-            })
+        self.engine.transport.get_untracked() == Transport::Stopped
     }
 
     /// After an enqueue: when nothing is playing, start the first song it

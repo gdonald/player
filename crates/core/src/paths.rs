@@ -27,6 +27,23 @@ pub fn mp3s(query: Option<&str>, sort: Option<&str>) -> String {
     }
 }
 
+/// The list request for the Albums view.
+pub fn albums(query: Option<&str>) -> String {
+    with_query("/api/albums", query)
+}
+
+/// The list request for the Artists view.
+pub fn artists(query: Option<&str>) -> String {
+    with_query("/api/artists", query)
+}
+
+fn with_query(path: &str, query: Option<&str>) -> String {
+    match query.filter(|text| !text.is_empty()) {
+        Some(text) => format!("{path}?q={}", encode_component(text)),
+        None => path.to_string(),
+    }
+}
+
 pub fn play(mp3_id: i64) -> String {
     format!("/api/mp3s/{mp3_id}/play")
 }
@@ -48,6 +65,26 @@ mod tests {
     #[test]
     fn other_characters_are_percent_encoded_as_utf8() {
         assert_eq!(encode_component("a b&\"é"), "a%20b%26%22%C3%A9");
+    }
+
+    #[test]
+    fn albums_without_a_query_lists_every_album() {
+        assert_eq!(albums(None), "/api/albums");
+        assert_eq!(albums(Some("")), "/api/albums");
+    }
+
+    #[test]
+    fn albums_with_a_query_searches() {
+        assert_eq!(albums(Some("iron maiden")), "/api/albums?q=iron%20maiden");
+    }
+
+    #[test]
+    fn artists_with_and_without_a_query() {
+        assert_eq!(artists(None), "/api/artists");
+        assert_eq!(
+            artists(Some("artist:\"Band\"")),
+            "/api/artists?q=artist%3A%22Band%22"
+        );
     }
 
     #[test]

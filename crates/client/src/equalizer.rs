@@ -2,7 +2,7 @@ use leptos::ev::MouseEvent;
 use leptos::prelude::*;
 use player_core::equalizer::{self, BANDS, CUSTOM, FLAT, Gains, PRESETS};
 
-use crate::audio_graph::audio_graph;
+use crate::state::ctx;
 use crate::storage;
 
 const OPEN_KEY: &str = "player.equalizer.open";
@@ -33,7 +33,7 @@ fn slider_style(gain: f32) -> String {
 
 #[component]
 pub fn Equalizer() -> impl IntoView {
-    let settings = audio_graph().settings;
+    let settings = ctx().engine.settings;
     let open = RwSignal::new(stored_open());
 
     Effect::new(move |_| store_open(open.get()));

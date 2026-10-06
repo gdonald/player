@@ -49,6 +49,15 @@ pub fn errors_for(errors: Option<&FieldErrors>, field: &str) -> String {
         .unwrap_or_default()
 }
 
+/// A request that could not be sent or whose body could not be read.
+#[allow(
+    clippy::needless_pass_by_value,
+    reason = "map_err hands over the error"
+)]
+fn failed(error: gloo_net::Error) -> ApiError {
+    ApiError::Failed(error.to_string())
+}
+
 async fn send(builder: RequestBuilder, body: Option<&Value>) -> Result<Response, ApiError> {
     let request = match body {
         Some(body) => builder.json(body),
@@ -56,10 +65,7 @@ async fn send(builder: RequestBuilder, body: Option<&Value>) -> Result<Response,
     }
     .expect("a request to an app path with a JSON or empty body builds");
 
-    let response = request
-        .send()
-        .await
-        .map_err(|error| ApiError::Failed(error.to_string()))?;
+    let response = request.send().await.map_err(failed)?;
 
     match response.status() {
         200..=299 => Ok(response),
@@ -72,10 +78,7 @@ async fn send(builder: RequestBuilder, body: Option<&Value>) -> Result<Response,
 }
 
 async fn parse<T: DeserializeOwned>(response: Response) -> Result<T, ApiError> {
-    response
-        .json::<T>()
-        .await
-        .map_err(|error| ApiError::Failed(error.to_string()))
+    response.json::<T>().await.map_err(failed)
 }
 
 pub async fn get<T: DeserializeOwned>(path: &str) -> Result<T, ApiError> {
@@ -95,6 +98,15 @@ pub async fn delete<T: DeserializeOwned>(path: &str) -> Result<T, ApiError> {
 }
 
 /// A GET whose body is not needed, such as starting a scan.
+/// The response body as bytes, for a song the player decodes.
+pub async fn bytes(path: &str) -> Result<Vec<u8>, ApiError> {
+    send(Request::get(path), None)
+        .await?
+        .binary()
+        .await
+        .map_err(failed)
+}
+
 pub async fn touch(path: &str) -> Result<(), ApiError> {
     send(Request::get(path), None).await.map(|_| ())
 }

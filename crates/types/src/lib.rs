@@ -63,6 +63,34 @@ pub struct Mp3sResponse {
     pub mp3s: Vec<Mp3>,
 }
 
+/// An album with songs, for the Albums view of the MP3s page.
+#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
+pub struct AlbumListItem {
+    pub id: i64,
+    pub name: String,
+    pub artist_name: String,
+    pub mp3s_count: i64,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct AlbumsResponse {
+    pub albums: Vec<AlbumListItem>,
+}
+
+/// An artist with songs, for the Artists view of the MP3s page.
+#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
+pub struct ArtistListItem {
+    pub id: i64,
+    pub name: String,
+    pub albums_count: i64,
+    pub mp3s_count: i64,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct ArtistsResponse {
+    pub artists: Vec<ArtistListItem>,
+}
+
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct Mp3Response {
     #[serde(default, skip_serializing_if = "Option::is_none")]

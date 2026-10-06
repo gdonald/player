@@ -6,7 +6,7 @@ use player_core::spectrum::{self, BAR_COUNT};
 use wasm_bindgen::JsCast;
 use web_sys::CanvasRenderingContext2d;
 
-use crate::audio_graph::audio_graph;
+use crate::state::ctx;
 use crate::storage;
 
 const OPEN_KEY: &str = "player.visualizer.open";
@@ -126,7 +126,7 @@ fn draw(canvas: &web_sys::HtmlCanvasElement, levels: &[f32], peaks: &[f32]) {
 /// with peak caps that fall back slowly.
 #[component]
 pub fn Visualizer() -> impl IntoView {
-    let graph = audio_graph();
+    let graph = ctx().engine;
     let canvas: NodeRef<html::Canvas> = NodeRef::new();
     let peaks = StoredValue::new(vec![0.0_f32; BAR_COUNT]);
     let open = RwSignal::new(stored_open());
