@@ -80,29 +80,35 @@ fn LoginForm() -> impl IntoView {
         <div class="container-fluid">
             <div class="row mt-5 justify-content-center">
                 <div class="col-11 col-sm-8 col-md-4 col-xl-2">
-                    <form on:submit=submit>
-                        <div class="mb-3">
-                            <label for="username" class="form-label">"Username"</label>
-                            <input
-                                type="text"
-                                placeholder="Username"
-                                id="username"
-                                class="form-control"
-                                on:input=move |event| username.set(event_target_value(&event))
-                            />
+                    <div class="winamp-window login" id="login">
+                        <div class="winamp-titlebar">
+                            <ThemePicker />
+                            <span>"LOGIN"</span>
                         </div>
-                        <div class="mb-3">
-                            <label for="password" class="form-label">"Password"</label>
-                            <input
-                                type="password"
-                                placeholder="Password"
-                                id="password"
-                                class="form-control"
-                                on:input=move |event| password.set(event_target_value(&event))
-                            />
-                        </div>
-                        <button type="submit" class="btn btn-primary">"Login"</button>
-                    </form>
+                        <form class="login-body" on:submit=submit>
+                            <div class="mb-3">
+                                <label for="username" class="form-label">"Username"</label>
+                                <input
+                                    type="text"
+                                    placeholder="Username"
+                                    id="username"
+                                    class="form-control"
+                                    on:input=move |event| username.set(event_target_value(&event))
+                                />
+                            </div>
+                            <div class="mb-3">
+                                <label for="password" class="form-label">"Password"</label>
+                                <input
+                                    type="password"
+                                    placeholder="Password"
+                                    id="password"
+                                    class="form-control"
+                                    on:input=move |event| password.set(event_target_value(&event))
+                                />
+                            </div>
+                            <button type="submit" class="btn btn-primary">"Login"</button>
+                        </form>
+                    </div>
                 </div>
             </div>
         </div>

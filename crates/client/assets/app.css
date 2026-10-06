@@ -454,6 +454,16 @@ body,
   padding: 0 3px;
 }
 
+/* Login window */
+
+.login-body {
+  padding: 10px 12px 12px;
+}
+
+.login-body .btn {
+  width: 100%;
+}
+
 /* Library pages */
 
 .breadcrumb {

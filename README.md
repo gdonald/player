@@ -26,6 +26,14 @@ The first run creates the `player_development` database (or the one named in `DA
 
 For a single process, build the client with `trunk build` in `crates/client` and run `player serve`, which serves `crates/client/dist` (or `WEB_ROOT`) on `PORT` (default 3000).
 
+## Deploying
+
+```bash
+./deploy.sh
+```
+
+Deploys the committed `HEAD` to the home lab cluster. It builds the `Dockerfile` for `linux/amd64` and pushes it to Harbor as `harbor.home.gregdonald.com/player/player:<version>-<commit>`, with the version from `crates/server/Cargo.toml`. Then it changes the image in the devops repo's `fleet/player/deployment.yaml`, commits and pushes that one file, waits for Fleet to apply it, and waits for the new pod. It stops without deploying when either repo has uncommitted changes to what it uses. `DEVOPS_REPO` names the devops checkout (default `~/workspace/devops`). It needs `docker` logged in to Harbor and `kubectl` pointed at the cluster.
+
 ## Themes
 
 Pick a theme from the menu at the left of the LIBRARY title bar. The choice is kept in the browser.

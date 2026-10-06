@@ -88,3 +88,23 @@ test("submitting the login form without a password stays on the form", async ({ 
   await expect(page.locator("#username")).toBeVisible();
   await expect(page.locator(".library-nav")).toHaveCount(0);
 });
+
+test("the login form sits in a window titled LOGIN", async ({ page }) => {
+  await page.goto("/");
+
+  await expect(page.locator("#login .winamp-titlebar span")).toHaveText("LOGIN");
+  await expect(page.locator("#login #username")).toBeVisible();
+});
+
+test("a theme chosen on the login page stays after signing in", async ({ page }) => {
+  await page.goto("/");
+  await page.selectOption("#theme-select", "steel");
+  await expect(page.locator("link#theme")).toHaveAttribute("href", "/themes/theme-steel.css");
+
+  await page.fill("#username", USERNAME);
+  await page.fill("#password", PASSWORD);
+  await page.click("button[type=submit]");
+
+  await expect(page.locator(".library-nav")).toBeVisible();
+  await expect(page.locator("#theme-select")).toHaveValue("steel");
+});
