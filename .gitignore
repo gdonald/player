@@ -3,4 +3,4 @@
 .env
 default*.profraw
 .DS_Store
-
+deploy.sh
