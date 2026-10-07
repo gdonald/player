@@ -1,6 +1,7 @@
 import { Page } from "@playwright/test";
 import { expect, test } from "./fixtures";
 import {
+  currentQueueRow,
   logIn,
   mp3Id,
   mp3Row,
@@ -126,6 +127,35 @@ test("play on a playing track starts it over", async ({ page }) => {
 test("the space bar pauses and resumes after clicking a title", async ({ page }) => {
   await play(page, "Encore");
   await waitUntilPlaying(page);
+
+  await page.keyboard.press(" ");
+  await expect.poll(() => transport(page)).toBe("paused");
+
+  await page.keyboard.press(" ");
+  await waitUntilPlaying(page);
+});
+
+test("the space bar pauses and resumes after clicking next instead of pressing next again", async ({ page }) => {
+  await play(page, "Encore");
+  await play(page, "Opening Song");
+  await play(page, "Second Song");
+  await page.click("#player-next");
+  await expect(currentQueueRow(page)).toContainText("Opening Song");
+  await waitUntilPlaying(page);
+
+  await page.keyboard.press(" ");
+  await expect.poll(() => transport(page)).toBe("paused");
+
+  await page.keyboard.press(" ");
+  await waitUntilPlaying(page);
+  await expect(currentQueueRow(page)).toContainText("Opening Song");
+  expect(await queueTitles(page)).toEqual(["Opening Song", "Second Song"]);
+});
+
+test("the space bar pauses and resumes after moving the seek bar", async ({ page }) => {
+  await play(page, "Encore");
+  await waitUntilPlaying(page);
+  await page.locator("#player-seek").focus();
 
   await page.keyboard.press(" ");
   await expect.poll(() => transport(page)).toBe("paused");

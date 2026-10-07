@@ -120,7 +120,10 @@ pub fn Player() -> impl IntoView {
         let toggles = event
             .target()
             .and_then(|target| target.dyn_into::<web_sys::Element>().ok())
-            .is_some_and(|element| playback::space_toggles_playback(&element.tag_name()));
+            .is_some_and(|element| {
+                let input_type = element.get_attribute("type").unwrap_or_default();
+                playback::space_toggles_playback(&element.tag_name(), &input_type)
+            });
 
         if toggles && event.key() == " " && has_track() {
             event.prevent_default();

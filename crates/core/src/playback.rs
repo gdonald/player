@@ -85,12 +85,17 @@ pub fn volume_icon(volume: f64, muted: bool) -> &'static str {
 }
 
 /// The space bar toggles playback unless focus is on an element where space
-/// already types, picks, or presses.
-pub fn space_toggles_playback(focused_tag: &str) -> bool {
-    !matches!(
-        focused_tag.to_ascii_uppercase().as_str(),
-        "INPUT" | "TEXTAREA" | "SELECT" | "BUTTON"
-    )
+/// types, picks, or checks. A focused button or slider still toggles, so the
+/// space bar never presses the button that was last clicked.
+pub fn space_toggles_playback(focused_tag: &str, input_type: &str) -> bool {
+    match focused_tag.to_ascii_uppercase().as_str() {
+        "INPUT" => matches!(
+            input_type.to_ascii_lowercase().as_str(),
+            "range" | "button" | "submit" | "reset"
+        ),
+        "TEXTAREA" | "SELECT" => false,
+        _ => true,
+    }
 }
 
 /// The queue entry that was current and how far into it playback was, kept
@@ -208,15 +213,29 @@ mod tests {
     }
 
     #[test]
-    fn space_toggles_playback_from_the_page_and_links() {
-        assert!(space_toggles_playback("BODY"));
-        assert!(space_toggles_playback("a"));
+    fn space_toggles_playback_from_the_page_links_buttons_and_sliders() {
+        assert!(space_toggles_playback("BODY", ""));
+        assert!(space_toggles_playback("a", ""));
+        assert!(space_toggles_playback("BUTTON", "button"));
+
+        for input_type in ["range", "Button", "submit", "reset"] {
+            assert!(space_toggles_playback("input", input_type), "{input_type}");
+        }
     }
 
     #[test]
-    fn space_is_left_to_form_controls() {
-        for tag in ["INPUT", "textarea", "SELECT", "BUTTON"] {
-            assert!(!space_toggles_playback(tag), "{tag}");
+    fn space_is_left_to_text_fields_menus_and_checkboxes() {
+        for (tag, input_type) in [
+            ("INPUT", "text"),
+            ("INPUT", ""),
+            ("INPUT", "checkbox"),
+            ("textarea", ""),
+            ("SELECT", ""),
+        ] {
+            assert!(
+                !space_toggles_playback(tag, input_type),
+                "{tag} {input_type}"
+            );
         }
     }
 

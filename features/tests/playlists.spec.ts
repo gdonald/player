@@ -1,5 +1,5 @@
 import { expect, test } from "./fixtures";
-import { alert, createPlaylist, currentQueueRow, logIn, menu, queueTitles, resetData } from "./helpers";
+import { alert, createPlaylist, currentQueueRow, logIn, menu, queueTitles, resetData, transport, waitUntilPlaying } from "./helpers";
 
 let playlistId: number;
 
@@ -140,6 +140,42 @@ test("enqueue from the list queues the playlist and starts it", async ({ page })
 
   await expect.poll(() => queueTitles(page)).toEqual(["Opening Song", "Encore", "Second Song"]);
   await expect(currentQueueRow(page)).toContainText("Opening Song");
+});
+
+test("next on an enqueued playlist plays the following song", async ({ page }) => {
+  await page.locator(`#playlist-${playlistId} .enqueue-playlist`).click();
+  await waitUntilPlaying(page);
+
+  await page.click("#player-next");
+
+  await expect.poll(() => queueTitles(page)).toEqual(["Encore", "Second Song"]);
+  await expect(currentQueueRow(page)).toContainText("Encore");
+  await waitUntilPlaying(page);
+});
+
+test("next right after enqueueing a playlist plays the following song", async ({ page }) => {
+  await page.locator(`#playlist-${playlistId} .enqueue-playlist`).click();
+  await expect(currentQueueRow(page)).toContainText("Opening Song");
+
+  await page.click("#player-next");
+
+  await expect.poll(() => queueTitles(page)).toEqual(["Encore", "Second Song"]);
+  await expect(currentQueueRow(page)).toContainText("Encore");
+  await waitUntilPlaying(page);
+});
+
+test("next after a reload plays the following song", async ({ page }) => {
+  await page.locator(`#playlist-${playlistId} .enqueue-playlist`).click();
+  await waitUntilPlaying(page);
+  await page.waitForFunction(() => /^\d+;/.test(window.localStorage.getItem("player.resume") ?? ""));
+  await page.reload();
+  await expect.poll(() => transport(page)).toBe("paused");
+
+  await page.click("#player-next");
+
+  await expect.poll(() => queueTitles(page)).toEqual(["Encore", "Second Song"]);
+  await expect(currentQueueRow(page)).toContainText("Encore");
+  await waitUntilPlaying(page);
 });
 
 test("enqueue from the playlist view queues the playlist", async ({ page }) => {
