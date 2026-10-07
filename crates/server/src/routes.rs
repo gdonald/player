@@ -186,7 +186,12 @@ async fn albums_index(
     Query(query): Query<ListQuery>,
 ) -> AppResult<Json<AlbumsResponse>> {
     let search = search::parse(query.q.as_deref().unwrap_or_default());
-    let albums = library::albums(&state.pool, &search).await?;
+    let albums = library::albums(
+        &state.pool,
+        &search,
+        sort::parse_list(query.sort.as_deref()),
+    )
+    .await?;
 
     Ok(Json(AlbumsResponse { albums }))
 }
@@ -196,7 +201,12 @@ async fn artists_index(
     Query(query): Query<ListQuery>,
 ) -> AppResult<Json<ArtistsResponse>> {
     let search = search::parse(query.q.as_deref().unwrap_or_default());
-    let artists = library::artists(&state.pool, &search).await?;
+    let artists = library::artists(
+        &state.pool,
+        &search,
+        sort::parse_list(query.sort.as_deref()),
+    )
+    .await?;
 
     Ok(Json(ArtistsResponse { artists }))
 }

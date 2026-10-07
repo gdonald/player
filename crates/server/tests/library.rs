@@ -199,3 +199,45 @@ async fn album_and_artist_lists_need_a_session(pool: PgPool) {
         (StatusCode::UNAUTHORIZED, json!({}))
     );
 }
+
+#[sqlx::test]
+async fn albums_sort_by_a_chosen_column_in_either_direction(pool: PgPool) {
+    let mut app = library(pool).await;
+
+    let (_, by_songs) = app.get("/api/albums?sort=songs_desc").await;
+    let (_, by_name) = app.get("/api/albums?sort=album_desc").await;
+
+    assert_eq!(
+        albums(&by_songs),
+        vec![
+            album("Piece Of Mind", "Iron Maiden", 2),
+            album("Dirt", "Alice In Chains", 1),
+            album("Powerslave", "Iron Maiden", 1),
+        ]
+    );
+    assert_eq!(
+        albums(&by_name),
+        vec![
+            album("Powerslave", "Iron Maiden", 1),
+            album("Piece Of Mind", "Iron Maiden", 2),
+            album("Dirt", "Alice In Chains", 1),
+        ]
+    );
+}
+
+#[sqlx::test]
+async fn artists_sort_by_a_chosen_column_with_a_search(pool: PgPool) {
+    let mut app = library(pool).await;
+
+    let (_, by_albums) = app.get("/api/artists?sort=albums_desc").await;
+    let (_, searched) = app.get("/api/artists?q=i&sort=artist_desc").await;
+
+    assert_eq!(
+        artists(&by_albums),
+        vec![artist("Iron Maiden", 2, 3), artist("Alice In Chains", 1, 1)]
+    );
+    assert_eq!(
+        artists(&searched),
+        vec![artist("Iron Maiden", 2, 3), artist("Alice In Chains", 1, 1)]
+    );
+}

@@ -45,6 +45,8 @@ pub fn Mp3s() -> impl IntoView {
     let mode = RwSignal::new(ListMode::parse(storage::get(MODE_KEY).as_deref()));
     let playlists = RwSignal::new(Vec::<PlaylistListItem>::new());
     let sort_by = RwSignal::new(None::<String>);
+    let album_sort = RwSignal::new(None::<String>);
+    let artist_sort = RwSignal::new(None::<String>);
     let selected = RwSignal::new(Vec::<i64>::new());
     let open_menu = RwSignal::new(None::<i64>);
     let search_text = RwSignal::new(ctx.query.get_untracked().unwrap_or_default());
@@ -72,7 +74,7 @@ pub fn Mp3s() -> impl IntoView {
                 });
             }
             ListMode::Albums => {
-                let url = paths::albums(query);
+                let url = paths::albums(query, album_sort.get_untracked().as_deref());
                 spawn_local(async move {
                     let _waiting = ctx.wait();
                     match api::get::<AlbumsResponse>(&url).await {
@@ -82,7 +84,7 @@ pub fn Mp3s() -> impl IntoView {
                 });
             }
             ListMode::Artists => {
-                let url = paths::artists(query);
+                let url = paths::artists(query, artist_sort.get_untracked().as_deref());
                 spawn_local(async move {
                     let _waiting = ctx.wait();
                     match api::get::<ArtistsResponse>(&url).await {
@@ -135,22 +137,24 @@ pub fn Mp3s() -> impl IntoView {
         load();
     };
 
-    let sort_header = move |column: &'static str, label: &'static str| {
-        view! {
-            <a
-                href="#"
-                class=format!("sort-{column}")
-                on:mousedown=move |event: MouseEvent| {
-                    event.prevent_default();
-                    sort_by.set(Some(sort::toggle(sort_by.get_untracked().as_deref(), column)));
-                    load();
-                }
-                on:click=|event: MouseEvent| event.prevent_default()
-            >
-                {label}
-            </a>
-        }
-    };
+    // `order` is the sort of the list the header belongs to.
+    let sort_header =
+        move |order: RwSignal<Option<String>>, column: &'static str, label: &'static str| {
+            view! {
+                <a
+                    href="#"
+                    class=format!("sort-{column}")
+                    on:mousedown=move |event: MouseEvent| {
+                        event.prevent_default();
+                        order.set(Some(sort::toggle(order.get_untracked().as_deref(), column)));
+                        load();
+                    }
+                    on:click=|event: MouseEvent| event.prevent_default()
+                >
+                    {label}
+                </a>
+            }
+        };
 
     let visible_ids = move || mp3s.with(|list| list.iter().map(|mp3| mp3.id).collect::<Vec<_>>());
     let search = Callback::new(search);
@@ -183,10 +187,10 @@ pub fn Mp3s() -> impl IntoView {
                                     }
                                 />
                             </th>
-                            <th>{sort_header("title", "Title")}</th>
-                            <th class="col-album">{sort_header("album", "Album")}</th>
-                            <th class="text-center col-track">{sort_header("track", "Track")}</th>
-                            <th>{sort_header("artist", "Artist")}</th>
+                            <th>{sort_header(sort_by, "title", "Title")}</th>
+                            <th class="col-album">{sort_header(sort_by, "album", "Album")}</th>
+                            <th class="text-center col-track">{sort_header(sort_by, "track", "Track")}</th>
+                            <th>{sort_header(sort_by, "artist", "Artist")}</th>
                             <th></th>
                         </tr>
                     </thead>
@@ -221,9 +225,9 @@ pub fn Mp3s() -> impl IntoView {
                 <table class="table table-striped table-hover" id="albums">
                     <thead>
                         <tr>
-                            <th>"Album"</th>
-                            <th>"Artist"</th>
-                            <th class="text-center tight">"Songs"</th>
+                            <th>{sort_header(album_sort, "album", "Album")}</th>
+                            <th>{sort_header(album_sort, "artist", "Artist")}</th>
+                            <th class="text-center tight">{sort_header(album_sort, "songs", "Songs")}</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -279,9 +283,9 @@ pub fn Mp3s() -> impl IntoView {
                 <table class="table table-striped table-hover" id="artists">
                     <thead>
                         <tr>
-                            <th>"Artist"</th>
-                            <th class="text-center tight">"Albums"</th>
-                            <th class="text-center tight">"Songs"</th>
+                            <th>{sort_header(artist_sort, "artist", "Artist")}</th>
+                            <th class="text-center tight">{sort_header(artist_sort, "albums", "Albums")}</th>
+                            <th class="text-center tight">{sort_header(artist_sort, "songs", "Songs")}</th>
                         </tr>
                     </thead>
                     <tbody>

@@ -28,19 +28,29 @@ pub fn mp3s(query: Option<&str>, sort: Option<&str>) -> String {
 }
 
 /// The list request for the Albums view.
-pub fn albums(query: Option<&str>) -> String {
-    with_query("/api/albums", query)
+pub fn albums(query: Option<&str>, sort: Option<&str>) -> String {
+    with_query("/api/albums", query, sort)
 }
 
 /// The list request for the Artists view.
-pub fn artists(query: Option<&str>) -> String {
-    with_query("/api/artists", query)
+pub fn artists(query: Option<&str>, sort: Option<&str>) -> String {
+    with_query("/api/artists", query, sort)
 }
 
-fn with_query(path: &str, query: Option<&str>) -> String {
-    match query.filter(|text| !text.is_empty()) {
-        Some(text) => format!("{path}?q={}", encode_component(text)),
-        None => path.to_string(),
+fn with_query(path: &str, query: Option<&str>, sort: Option<&str>) -> String {
+    let params: Vec<String> = [("q", query), ("sort", sort)]
+        .into_iter()
+        .filter_map(|(name, value)| {
+            value
+                .filter(|text| !text.is_empty())
+                .map(|text| format!("{name}={}", encode_component(text)))
+        })
+        .collect();
+
+    if params.is_empty() {
+        path.to_string()
+    } else {
+        format!("{path}?{}", params.join("&"))
     }
 }
 
@@ -68,22 +78,37 @@ mod tests {
     }
 
     #[test]
-    fn albums_without_a_query_lists_every_album() {
-        assert_eq!(albums(None), "/api/albums");
-        assert_eq!(albums(Some("")), "/api/albums");
+    fn albums_without_a_query_or_sort_lists_every_album() {
+        assert_eq!(albums(None, None), "/api/albums");
+        assert_eq!(albums(Some(""), Some("")), "/api/albums");
     }
 
     #[test]
     fn albums_with_a_query_searches() {
-        assert_eq!(albums(Some("iron maiden")), "/api/albums?q=iron%20maiden");
+        assert_eq!(
+            albums(Some("iron maiden"), None),
+            "/api/albums?q=iron%20maiden"
+        );
     }
 
     #[test]
-    fn artists_with_and_without_a_query() {
-        assert_eq!(artists(None), "/api/artists");
+    fn albums_with_a_sort_and_a_query_send_both() {
         assert_eq!(
-            artists(Some("artist:\"Band\"")),
+            albums(Some("dirt"), Some("songs_desc")),
+            "/api/albums?q=dirt&sort=songs_desc"
+        );
+    }
+
+    #[test]
+    fn artists_with_and_without_a_query_or_sort() {
+        assert_eq!(artists(None, None), "/api/artists");
+        assert_eq!(
+            artists(Some("artist:\"Band\""), None),
             "/api/artists?q=artist%3A%22Band%22"
+        );
+        assert_eq!(
+            artists(None, Some("albums_asc")),
+            "/api/artists?sort=albums_asc"
         );
     }
 

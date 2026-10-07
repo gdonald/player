@@ -1,4 +1,5 @@
 use player_core::search::SearchQuery;
+use player_core::sort::{ListField, SortDirection};
 use player_types::{AlbumListItem, ArtistListItem};
 use sqlx::{PgExecutor, PgPool, Postgres, QueryBuilder};
 
@@ -48,9 +49,47 @@ struct ArtistRow {
     mp3s_count: i64,
 }
 
-/// Albums with songs, by artist then album name. Search parts match the album
+/// The direction keyword for `ORDER BY`.
+fn direction(direction: SortDirection) -> &'static str {
+    match direction {
+        SortDirection::Ascending => "ASC",
+        SortDirection::Descending => "DESC",
+    }
+}
+
+/// The album order: the chosen column, then artist and album name.
+fn album_order(sort: Option<(ListField, SortDirection)>) -> String {
+    const DEFAULT: &str = "ar.name, al.name, al.id";
+
+    match sort {
+        Some((ListField::Album, chosen)) => format!("al.name {}, {DEFAULT}", direction(chosen)),
+        Some((ListField::Artist, chosen)) => format!("ar.name {}, {DEFAULT}", direction(chosen)),
+        Some((ListField::Songs, chosen)) => format!("mp3s_count {}, {DEFAULT}", direction(chosen)),
+        Some((ListField::Albums, _)) | None => DEFAULT.to_string(),
+    }
+}
+
+/// The artist order: the chosen column, then artist name.
+fn artist_order(sort: Option<(ListField, SortDirection)>) -> String {
+    const DEFAULT: &str = "ar.name, ar.id";
+
+    match sort {
+        Some((ListField::Artist, chosen)) => format!("ar.name {}, ar.id", direction(chosen)),
+        Some((ListField::Albums, chosen)) => {
+            format!("albums_count {}, {DEFAULT}", direction(chosen))
+        }
+        Some((ListField::Songs, chosen)) => format!("mp3s_count {}, {DEFAULT}", direction(chosen)),
+        Some((ListField::Album, _)) | None => DEFAULT.to_string(),
+    }
+}
+
+/// Albums with songs, by artist then album name unless `sort` picks a column. Search parts match the album
 /// or the artist name, and the `artist:` and `album:` filters match exactly.
-pub async fn albums(pool: &PgPool, query: &SearchQuery) -> sqlx::Result<Vec<AlbumListItem>> {
+pub async fn albums(
+    pool: &PgPool,
+    query: &SearchQuery,
+    sort: Option<(ListField, SortDirection)>,
+) -> sqlx::Result<Vec<AlbumListItem>> {
     let mut builder: QueryBuilder<Postgres> = QueryBuilder::new(
         "SELECT al.id, al.name, ar.name AS artist_name, COUNT(m.id) AS mp3s_count \
          FROM albums al \
@@ -71,7 +110,8 @@ pub async fn albums(pool: &PgPool, query: &SearchQuery) -> sqlx::Result<Vec<Albu
         builder.push_bind(escape_like(album));
     }
 
-    builder.push(" GROUP BY al.id, ar.name ORDER BY ar.name, al.name, al.id");
+    builder.push(" GROUP BY al.id, ar.name ORDER BY ");
+    builder.push(album_order(sort));
 
     let rows: Vec<AlbumRow> = builder.build_query_as().fetch_all(pool).await?;
 
@@ -86,10 +126,14 @@ pub async fn albums(pool: &PgPool, query: &SearchQuery) -> sqlx::Result<Vec<Albu
         .collect())
 }
 
-/// Artists with songs, by name. Search parts match the artist name, the
+/// Artists with songs, by name unless `sort` picks a column. Search parts match the artist name, the
 /// `artist:` filter matches it exactly, and the `album:` filter keeps artists
 /// with an album of that name.
-pub async fn artists(pool: &PgPool, query: &SearchQuery) -> sqlx::Result<Vec<ArtistListItem>> {
+pub async fn artists(
+    pool: &PgPool,
+    query: &SearchQuery,
+    sort: Option<(ListField, SortDirection)>,
+) -> sqlx::Result<Vec<ArtistListItem>> {
     let mut builder: QueryBuilder<Postgres> = QueryBuilder::new(
         "SELECT ar.id, ar.name, COUNT(DISTINCT m.album_id) AS albums_count, \
          COUNT(m.id) AS mp3s_count \
@@ -111,7 +155,8 @@ pub async fn artists(pool: &PgPool, query: &SearchQuery) -> sqlx::Result<Vec<Art
         builder.push(")");
     }
 
-    builder.push(" GROUP BY ar.id ORDER BY ar.name, ar.id");
+    builder.push(" GROUP BY ar.id ORDER BY ");
+    builder.push(artist_order(sort));
 
     let rows: Vec<ArtistRow> = builder.build_query_as().fetch_all(pool).await?;
 
@@ -131,6 +176,56 @@ mod tests {
     use sqlx::PgPool;
 
     use super::*;
+
+    #[test]
+    fn albums_default_to_artist_then_album() {
+        assert_eq!(album_order(None), "ar.name, al.name, al.id");
+        assert_eq!(
+            album_order(Some((ListField::Albums, SortDirection::Descending))),
+            "ar.name, al.name, al.id"
+        );
+    }
+
+    #[test]
+    fn albums_sort_by_the_chosen_column_first() {
+        assert_eq!(
+            album_order(Some((ListField::Album, SortDirection::Descending))),
+            "al.name DESC, ar.name, al.name, al.id"
+        );
+        assert_eq!(
+            album_order(Some((ListField::Artist, SortDirection::Ascending))),
+            "ar.name ASC, ar.name, al.name, al.id"
+        );
+        assert_eq!(
+            album_order(Some((ListField::Songs, SortDirection::Descending))),
+            "mp3s_count DESC, ar.name, al.name, al.id"
+        );
+    }
+
+    #[test]
+    fn artists_default_to_their_name() {
+        assert_eq!(artist_order(None), "ar.name, ar.id");
+        assert_eq!(
+            artist_order(Some((ListField::Album, SortDirection::Ascending))),
+            "ar.name, ar.id"
+        );
+    }
+
+    #[test]
+    fn artists_sort_by_the_chosen_column_first() {
+        assert_eq!(
+            artist_order(Some((ListField::Artist, SortDirection::Descending))),
+            "ar.name DESC, ar.id"
+        );
+        assert_eq!(
+            artist_order(Some((ListField::Albums, SortDirection::Descending))),
+            "albums_count DESC, ar.name, ar.id"
+        );
+        assert_eq!(
+            artist_order(Some((ListField::Songs, SortDirection::Ascending))),
+            "mp3s_count ASC, ar.name, ar.id"
+        );
+    }
 
     #[sqlx::test]
     async fn artist_is_created_once(pool: PgPool) {

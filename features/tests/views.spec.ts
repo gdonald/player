@@ -139,3 +139,38 @@ test("failed album and artist loads show the error", async ({ page }) => {
   await modeButton(page, "artists").click();
   await expect(page.locator(".alert")).toContainText("Request failed (500)");
 });
+
+test("clicking an album header sorts by it, ascending then descending", async ({ page }) => {
+  await modeButton(page, "albums").click();
+  await expect(rows(page, "albums")).toHaveCount(3);
+
+  await page.locator("#albums .sort-album").click();
+  await expect(rows(page, "albums").locator(".show-album")).toHaveText(["First Album", "Live", "Unknown"]);
+
+  await page.locator("#albums .sort-album").click();
+  await expect(rows(page, "albums").locator(".show-album")).toHaveText(["Unknown", "Live", "First Album"]);
+
+  await page.locator("#albums .sort-songs").click();
+  await page.locator("#albums .sort-songs").click();
+  await expect(rows(page, "albums").locator(".show-album").first()).toHaveText("First Album");
+
+  await page.locator("#albums .sort-artist").click();
+  await page.locator("#albums .sort-artist").click();
+  await expect(rows(page, "albums").locator(".show-artist")).toHaveText(["The Testers", "Other Band", "Filename Artist"]);
+});
+
+test("clicking an artist header sorts by it, ascending then descending", async ({ page }) => {
+  await modeButton(page, "artists").click();
+  await expect(rows(page, "artists")).toHaveCount(3);
+
+  await page.locator("#artists .sort-artist").click();
+  await page.locator("#artists .sort-artist").click();
+  await expect(rows(page, "artists").locator(".show-artist")).toHaveText(["The Testers", "Other Band", "Filename Artist"]);
+
+  await page.locator("#artists .sort-songs").click();
+  await page.locator("#artists .sort-songs").click();
+  await expect(rows(page, "artists").locator(".show-artist").first()).toHaveText("The Testers");
+
+  await page.locator("#artists .sort-albums").click();
+  await expect(rows(page, "artists").locator(".show-artist")).toHaveText(["Filename Artist", "Other Band", "The Testers"]);
+});
