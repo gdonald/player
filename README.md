@@ -32,7 +32,7 @@ For a single process, build the client with `trunk build` in `crates/client` and
 
 ## Themes
 
-Pick a theme from the menu at the left of the LIBRARY title bar. The choice is kept in the browser.
+Pick a theme from the menu at the right of the player's title bar, next to the logout button. The choice is kept in the browser.
 
 ![MP3 Player](https://raw.githubusercontent.com/gdonald/player/main/ss1.png "MP3 Player")
 

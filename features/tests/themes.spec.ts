@@ -7,6 +7,8 @@ const CHARCOAL_TITLE_COLOR = "rgb(211, 212, 215)";
 const CHARCOAL_DISPLAY_COLOR = "rgb(162, 193, 204)";
 const STEEL_DISPLAY_COLOR = "rgb(244, 244, 244)";
 const STEEL_LIST_COLOR = "rgb(185, 241, 185)";
+const STEEL_BLUE_LIST_COLOR = "rgb(185, 212, 241)";
+const STEEL_BLUE_LIGHT_COLOR = "rgb(42, 157, 255)";
 const SAPPHIRE_DISPLAY_COLOR = "rgb(255, 255, 255)";
 const SAPPHIRE_LIST_BACKGROUND = "rgb(28, 61, 125)";
 
@@ -69,6 +71,26 @@ test("the steel theme shows white display text and green playlist text", async (
     .toBe(STEEL_LIST_COLOR);
 
   await page.screenshot({ path: testInfo.outputPath("steel.png") });
+});
+
+test("the steel blue theme shows blue playlist text and blue lights", async ({ page }, testInfo) => {
+  await page.selectOption("#theme-select", "steel-blue");
+  await expect(themeLink(page)).toHaveAttribute("href", "/themes/theme-steel-blue.css");
+
+  for (const selector of ["#player-position", "#player-title", "#player-duration", ".library-count"]) {
+    await expect
+      .poll(() => page.locator(selector).first().evaluate((element) => getComputedStyle(element).color))
+      .toBe(STEEL_DISPLAY_COLOR);
+  }
+  await page.mouse.move(0, 0);
+  await expect
+    .poll(() => page.locator("#mp3s tbody td").nth(1).evaluate((element) => getComputedStyle(element).color))
+    .toBe(STEEL_BLUE_LIST_COLOR);
+  await expect
+    .poll(() => page.locator(".library-button.winamp-lit i").first().evaluate((element) => getComputedStyle(element).color))
+    .toBe(STEEL_BLUE_LIGHT_COLOR);
+
+  await page.screenshot({ path: testInfo.outputPath("steel-blue.png") });
 });
 
 test("the sapphire theme shows white display text and a blue playlist", async ({ page }, testInfo) => {
