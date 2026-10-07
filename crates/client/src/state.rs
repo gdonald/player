@@ -1,5 +1,6 @@
 use leptos::prelude::*;
 use leptos::task::spawn_local;
+use player_core::playback;
 use player_core::queue;
 use player_types::{CountsResponse, FlexId, QueuedMp3, QueuedMp3Params, QueuedMp3sResponse, wrap};
 use serde_json::json;
@@ -12,6 +13,8 @@ const AUDIO_UNAVAILABLE: &str = "This browser cannot play audio.";
 
 const QUERY_KEY: &str = "player.query";
 const MODE_KEY: &str = "player.mode";
+const RESUME_KEY: &str = "player.resume";
+const RESUME_SAVE_INTERVAL: std::time::Duration = std::time::Duration::from_secs(1);
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Page {
@@ -38,6 +41,8 @@ pub struct Ctx {
     pub mode: RwSignal<queue::Mode>,
     /// The library counts on the menu buttons.
     pub counts: RwSignal<Option<CountsResponse>>,
+    /// Whether the first queue load restored the saved playback.
+    restored: StoredValue<bool>,
 }
 
 pub fn ctx() -> Ctx {
@@ -66,6 +71,7 @@ impl Ctx {
             engine: Engine::new(),
             mode: RwSignal::new(queue::Mode::parse(storage::get(MODE_KEY).as_deref())),
             counts: RwSignal::new(None),
+            restored: StoredValue::new(false),
         }
     }
 
@@ -78,6 +84,37 @@ impl Ctx {
 
         let mode = self.mode;
         Effect::new(move |_| storage::set(MODE_KEY, mode.get().as_str()));
+    }
+
+    fn save_playback(&self) {
+        let saved = playback::serialize_resume(self.current_id(), self.engine.position());
+        storage::set(RESUME_KEY, &saved);
+    }
+
+    /// On the first queue load, cues the saved entry paused at the saved
+    /// position when it is still in the queue, since browsers do not start
+    /// audio before a click. From then on the current entry and position are
+    /// saved each second.
+    fn restore(&self) {
+        if self.restored.get_value() {
+            return;
+        }
+        self.restored.set_value(true);
+
+        let saved = playback::parse_resume(storage::get(RESUME_KEY).as_deref());
+        let entry = saved.and_then(|saved| {
+            self.entry(saved.entry_id)
+                .map(|entry| (entry, saved.position))
+        });
+
+        if let Some((entry, position)) = entry
+            && self.engine.cue(entry.mp3.id, position)
+        {
+            self.current.set(Some(entry));
+        }
+
+        let ctx = *self;
+        set_interval(move || ctx.save_playback(), RESUME_SAVE_INTERVAL);
     }
 
     pub fn wait(&self) -> Waiting {
@@ -232,7 +269,10 @@ impl Ctx {
 
     fn apply_queue(&self, result: Result<QueuedMp3sResponse, ApiError>) {
         match result {
-            Ok(body) => self.queue.set(body.queued_mp3s),
+            Ok(body) => {
+                self.queue.set(body.queued_mp3s);
+                self.restore();
+            }
             Err(error) => self.fail(&error),
         }
     }

@@ -190,13 +190,17 @@ impl Inner {
             .map_or(0.0, |loaded| loaded.buffer.duration())
     }
 
+    /// Before a cued song has loaded, its length is unknown and the cued
+    /// position stands.
     fn position(&self) -> f64 {
         let position = self
             .sounding
             .as_ref()
             .map_or(self.offset, |sounding| self.now() - sounding.started_at);
 
-        position.clamp(0.0, self.duration())
+        self.current.as_ref().map_or(position, |loaded| {
+            position.clamp(0.0, loaded.buffer.duration())
+        })
     }
 
     /// A source for `buffer` that starts at context time `when`, `offset`
@@ -298,6 +302,7 @@ impl Inner {
     fn loaded(&mut self, engine: Engine, generation: u64, loaded: Loaded, playing: bool) -> bool {
         let latest = generation == self.generation;
         if latest {
+            self.offset = self.offset.min(loaded.buffer.duration());
             self.current = Some(loaded);
             if playing {
                 self.begin(engine);
@@ -383,6 +388,15 @@ impl Inner {
                 None
             }
         }
+    }
+
+    /// Forgets every song and keeps `offset` as where the next load starts.
+    /// Returns the generation of that load.
+    fn cue(&mut self, offset: f64) -> u64 {
+        self.clear();
+        self.offset = offset;
+
+        self.generation
     }
 
     /// Forgets every song, for a stop with nothing loaded.
@@ -506,29 +520,48 @@ impl Engine {
         self.loading.set(load_needed.is_some());
 
         if let Some((context, generation)) = load_needed {
-            spawn_local(async move {
-                let result = load(context, mp3_id).await;
-                let playing = self.transport.get_untracked() == Transport::Playing;
-                let latest = self
-                    .with_inner(|inner| match result {
-                        Ok(loaded) => inner
-                            .loaded(self, generation, loaded, playing)
-                            .then_some(None),
-                        Err(error) => (generation == inner.generation).then_some(Some(error)),
-                    })
-                    .flatten();
-
-                // A load replaced by a later play changes nothing.
-                if let Some(failure) = latest {
-                    self.loading.set(false);
-                    self.refresh_duration();
-                    if let Some(error) = failure {
-                        self.transport.set(Transport::Stopped);
-                        self.failure.set(Some(error));
-                    }
-                }
-            });
+            self.load_current(context, mp3_id, generation);
         }
+    }
+
+    /// Loads a song paused at `offset` seconds, for play to start there.
+    /// Returns whether the browser can play audio.
+    pub fn cue(self, mp3_id: i64, offset: f64) -> bool {
+        let load = self.with_inner(|inner| (inner.graph.context.clone(), inner.cue(offset)));
+        let cued = load.is_some();
+
+        if let Some((context, generation)) = load {
+            self.transport.set(Transport::Paused);
+            self.loading.set(true);
+            self.load_current(context, mp3_id, generation);
+        }
+
+        cued
+    }
+
+    fn load_current(self, context: AudioContext, mp3_id: i64, generation: u64) {
+        spawn_local(async move {
+            let result = load(context, mp3_id).await;
+            let playing = self.transport.get_untracked() == Transport::Playing;
+            let latest = self
+                .with_inner(|inner| match result {
+                    Ok(loaded) => inner
+                        .loaded(self, generation, loaded, playing)
+                        .then_some(None),
+                    Err(error) => (generation == inner.generation).then_some(Some(error)),
+                })
+                .flatten();
+
+            // A load replaced by a later play changes nothing.
+            if let Some(failure) = latest {
+                self.loading.set(false);
+                self.refresh_duration();
+                if let Some(error) = failure {
+                    self.transport.set(Transport::Stopped);
+                    self.failure.set(Some(error));
+                }
+            }
+        });
     }
 
     /// Stops and forgets every song.

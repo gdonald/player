@@ -93,6 +93,32 @@ pub fn space_toggles_playback(focused_tag: &str) -> bool {
     )
 }
 
+/// The queue entry that was current and how far into it playback was, kept
+/// so a reload picks up there.
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct Resume {
+    pub entry_id: i64,
+    pub position: f64,
+}
+
+/// Stored as `entry;seconds`, or empty when nothing is current.
+pub fn serialize_resume(entry_id: Option<i64>, position: f64) -> String {
+    entry_id.map_or_else(String::new, |entry_id| format!("{entry_id};{position:.1}"))
+}
+
+pub fn parse_resume(stored: Option<&str>) -> Option<Resume> {
+    let (entry_id, position) = stored?.split_once(';')?;
+    let position = position
+        .parse::<f64>()
+        .ok()
+        .filter(|position| position.is_finite())?;
+
+    Some(Resume {
+        entry_id: entry_id.parse().ok()?,
+        position: position.max(0.0),
+    })
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -200,5 +226,41 @@ mod tests {
         assert_eq!(volume_icon(0.3, false), "volume-down-fill");
         assert_eq!(volume_icon(0.0, false), "volume-mute-fill");
         assert_eq!(volume_icon(0.8, true), "volume-mute-fill");
+    }
+
+    #[test]
+    fn the_resume_point_reads_back_from_storage() {
+        let stored = serialize_resume(Some(42), 61.26);
+
+        assert_eq!(stored, "42;61.3");
+        assert_eq!(
+            parse_resume(Some(&stored)),
+            Some(Resume {
+                entry_id: 42,
+                position: 61.3
+            })
+        );
+    }
+
+    #[test]
+    fn nothing_current_stores_an_empty_resume_point() {
+        assert_eq!(serialize_resume(None, 12.0), "");
+        assert_eq!(parse_resume(Some("")), None);
+        assert_eq!(parse_resume(None), None);
+    }
+
+    #[test]
+    fn a_damaged_resume_point_is_ignored() {
+        assert_eq!(parse_resume(Some("x;1")), None);
+        assert_eq!(parse_resume(Some("4;x")), None);
+        assert_eq!(parse_resume(Some("4;inf")), None);
+    }
+
+    #[test]
+    fn a_negative_resume_position_starts_at_the_beginning() {
+        assert_eq!(
+            parse_resume(Some("4;-3")).map(|resume| resume.position),
+            Some(0.0)
+        );
     }
 }
