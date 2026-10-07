@@ -569,6 +569,16 @@ p.text-center {
   color: var(--wa-green);
 }
 
+/* Buffering overlay */
+
+.buffering {
+  background: rgba(0, 0, 0, 0.8);
+  color: var(--wa-green);
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 1px;
+}
+
 /* Request spinner */
 
 .waiting div {

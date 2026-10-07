@@ -294,14 +294,18 @@ impl Inner {
 
     /// A load finished. It becomes the current song unless another song was
     /// played since, and starts when the player is playing.
-    fn loaded(&mut self, engine: Engine, generation: u64, loaded: Loaded, playing: bool) {
-        if generation == self.generation {
+    /// Returns whether the load was kept.
+    fn loaded(&mut self, engine: Engine, generation: u64, loaded: Loaded, playing: bool) -> bool {
+        let latest = generation == self.generation;
+        if latest {
             self.current = Some(loaded);
             if playing {
                 self.begin(engine);
             }
             self.fetch_next(engine);
         }
+
+        latest
     }
 
     /// The song to follow the current one changed.
@@ -416,6 +420,8 @@ pub struct Engine {
     inner: StoredValue<Option<Inner>, LocalStorage>,
     pub transport: RwSignal<Transport>,
     pub duration: RwSignal<f64>,
+    /// Whether the song to play is still downloading and decoding.
+    pub loading: RwSignal<bool>,
     pub settings: RwSignal<Settings>,
     /// Set when a song ends, for the queue to move on.
     pub ended: RwSignal<Option<Ended>>,
@@ -443,6 +449,7 @@ impl Engine {
             inner: StoredValue::new_local(inner),
             transport: RwSignal::new(Transport::Stopped),
             duration: RwSignal::new(0.0),
+            loading: RwSignal::new(false),
             settings: RwSignal::new(stored_settings()),
             ended: RwSignal::new(None),
             failure: RwSignal::new(None),
@@ -496,16 +503,26 @@ impl Engine {
             })
             .flatten();
         self.refresh_duration();
+        self.loading.set(load_needed.is_some());
 
         if let Some((context, generation)) = load_needed {
             spawn_local(async move {
-                match load(context, mp3_id).await {
-                    Ok(loaded) => {
-                        let playing = self.transport.get_untracked() == Transport::Playing;
-                        self.with_inner(|inner| inner.loaded(self, generation, loaded, playing));
-                        self.refresh_duration();
-                    }
-                    Err(error) => {
+                let result = load(context, mp3_id).await;
+                let playing = self.transport.get_untracked() == Transport::Playing;
+                let latest = self
+                    .with_inner(|inner| match result {
+                        Ok(loaded) => inner
+                            .loaded(self, generation, loaded, playing)
+                            .then_some(None),
+                        Err(error) => (generation == inner.generation).then_some(Some(error)),
+                    })
+                    .flatten();
+
+                // A load replaced by a later play changes nothing.
+                if let Some(failure) = latest {
+                    self.loading.set(false);
+                    self.refresh_duration();
+                    if let Some(error) = failure {
                         self.transport.set(Transport::Stopped);
                         self.failure.set(Some(error));
                     }
@@ -517,6 +534,7 @@ impl Engine {
     /// Stops and forgets every song.
     pub fn clear(self) {
         self.with_inner(Inner::clear);
+        self.loading.set(false);
         self.transport.set(Transport::Stopped);
         self.refresh_duration();
     }

@@ -240,6 +240,49 @@ body,
   gap: 4px;
 }
 
+/* Buffering overlay over the player while a song loads. Clicks pass
+   through, so the controls still work underneath. */
+
+.buffering {
+  position: absolute;
+  inset: 0;
+  z-index: 5;
+  pointer-events: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+}
+
+.buffering-notes {
+  display: flex;
+  gap: 4px;
+  font-size: 20px;
+}
+
+.buffering-notes i {
+  display: inline-block;
+  animation: buffering-note 0.9s ease-in-out infinite;
+}
+
+.buffering-notes i:nth-child(2) {
+  animation-delay: 0.15s;
+}
+
+.buffering-notes i:nth-child(3) {
+  animation-delay: 0.3s;
+}
+
+@keyframes buffering-note {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-6px);
+  }
+}
+
 /* Seek and volume sliders */
 
 .winamp-seek,

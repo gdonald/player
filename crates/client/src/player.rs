@@ -253,6 +253,16 @@ pub fn Player() -> impl IntoView {
                     <i class="bi-box-arrow-right"></i>
                 </button>
             </div>
+            <Show when=move || engine.loading.get()>
+                <div class="buffering" id="buffering" role="status">
+                    <div class="buffering-notes" aria-hidden="true">
+                        <i class="bi-music-note"></i>
+                        <i class="bi-music-note-beamed"></i>
+                        <i class="bi-music-note"></i>
+                    </div>
+                    <span>"Buffering..."</span>
+                </div>
+            </Show>
             <div class="player-body">
                 <div class="player-lcd" id="player-lcd">
                     <i class=move || format!("player-state {}", transport_icon(transport.get())) id="player-state"></i>

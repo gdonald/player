@@ -338,3 +338,68 @@ test("the next song is not requested until the current one has loaded", async ({
   await nextRequested;
   await waitUntilPlaying(page);
 });
+
+test("the buffering overlay shows while a song loads and nothing plays", async ({ page }) => {
+  const release = await holdSong(page, "Encore");
+
+  await mp3Row(page, "Encore").locator(".play-mp3").click();
+
+  const overlay = page.locator("#buffering");
+  await expect(overlay).toBeVisible();
+  await expect(overlay).toContainText("Buffering...");
+  await expect(overlay.locator(".buffering-notes i")).toHaveCount(3);
+
+  release();
+
+  await waitUntilPlaying(page);
+  await expect(overlay).toHaveCount(0);
+});
+
+test("the buffering overlay stays hidden while the next song loads behind a playing one", async ({ page }) => {
+  await enqueue(page, "Encore");
+  await waitUntilPlaying(page);
+  const nextId = await mp3Id("Opening Song");
+  await holdSong(page, "Opening Song");
+  const nextRequested = page.waitForRequest((request) => request.url().endsWith(`/api/mp3s/${nextId}/play`));
+
+  await enqueue(page, "Opening Song");
+  await nextRequested;
+
+  await expect(page.locator("#buffering")).toHaveCount(0);
+  await expect.poll(() => transport(page)).toBe("playing");
+});
+
+test("a replaced song that fails to load leaves the newer song playing", async ({ page }) => {
+  const encoreId = await mp3Id("Encore");
+  let release: () => void = () => {};
+  const released = new Promise<void>((resolve) => (release = resolve));
+  await page.route(`**/api/mp3s/${encoreId}/play`, async (route) => {
+    await released;
+    await route.fulfill({ status: 200, contentType: "audio/mpeg", body: "not audio" });
+  });
+  const encoreAnswered = page.waitForResponse((response) => response.url().endsWith(`/api/mp3s/${encoreId}/play`));
+  await enqueue(page, "Encore");
+  await enqueue(page, "Opening Song");
+
+  await page.click("#player-next");
+  await waitUntilPlaying(page);
+  release();
+  await encoreAnswered;
+  const before = await position(page);
+
+  await expect.poll(() => position(page)).toBeGreaterThan(before + 0.5);
+  await expect(page.locator(".alert")).toHaveCount(0);
+  await expect(page.locator("#buffering")).toHaveCount(0);
+  await expect(page.locator("#player-title")).toContainText("Opening Song");
+});
+
+test("a song that fails to load hides the buffering overlay", async ({ page }) => {
+  await page.route(/\/api\/mp3s\/\d+\/play$/, (route) =>
+    route.fulfill({ status: 200, contentType: "audio/mpeg", body: "not audio" }),
+  );
+
+  await mp3Row(page, "Encore").locator(".play-mp3").click();
+
+  await expect(page.locator(".alert")).toContainText("The song could not be played");
+  await expect(page.locator("#buffering")).toHaveCount(0);
+});
