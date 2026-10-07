@@ -22,12 +22,12 @@
   --st-lcd: #000;
   --st-display: #f4f4f4;
   --st-display-dim: #b7b7d1;
-  --st-list-text: #b9d4f1;
+  --st-list-text: #8fdcff;
   --st-list-current: #f2f2f2;
   --st-select: #6b6b6f;
   --st-scale: #fdd831;
-  --st-light-on: #2a9dff;
-  --st-light-off: #1f2b3a;
+  --st-light-on: #00b4ff;
+  --st-light-off: #10283a;
   --st-button: linear-gradient(#a09991, #89837c 12%, #908a83 25%, #98918a 40%, #a29b93 55%, #aba39b 70%, #b2aaa2 85%, #bbb3aa);
   --st-button-hover: linear-gradient(#b0a9a1, #99938c 12%, #a09a93 25%, #a8a19a 40%, #b2aba3 55%, #bbb3ab 70%, #c2bab2 85%, #cbc3ba);
   --st-button-pressed: linear-gradient(#bbb3aa, #a29b93 50%, #89837c);
@@ -40,10 +40,10 @@
   --st-digits: "Courier New", Consolas, monospace;
 
   --vis-background: var(--st-lcd);
-  --vis-bar-low: #0050b4;
-  --vis-bar-mid: #29a8de;
+  --vis-bar-low: #0078ff;
+  --vis-bar-mid: #00ccff;
   --vis-bar-high: #d66600;
-  --vis-peak: #9ec8eb;
+  --vis-peak: #a8eaff;
   --vis-scanline: rgba(0, 0, 0, 0);
 
   --bs-body-bg: var(--st-desktop);
@@ -53,7 +53,7 @@
   --bs-border-color: var(--st-bevel-dark);
   --bs-secondary-color: var(--st-display-dim);
   --bs-link-color: var(--st-list-text);
-  --bs-link-color-rgb: 185, 212, 241;
+  --bs-link-color-rgb: 143, 220, 255;
   --bs-link-hover-color: var(--st-list-current);
   --bs-link-hover-color-rgb: 242, 242, 242;
 }
@@ -261,7 +261,7 @@ body {
 /* Equalizer window: sliders on the metal face, yellow scale, white bands */
 
 .equalizer-curve-zero {
-  stroke: #0050a8;
+  stroke: #0078ff;
   stroke-width: 0.5;
   stroke-dasharray: 2 2;
 }
@@ -371,7 +371,7 @@ body {
 .playlist-mode.winamp-lit i,
 .library-button.winamp-lit i {
   color: var(--st-light-on);
-  text-shadow: 0 0 1px var(--st-outline), 0 0 3px rgba(42, 157, 255, 0.6);
+  text-shadow: 0 0 1px var(--st-outline), 0 0 3px rgba(0, 180, 255, 0.6);
 }
 
 .playlist-total {
