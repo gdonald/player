@@ -174,3 +174,47 @@ test("clicking an artist header sorts by it, ascending then descending", async (
   await page.locator("#artists .sort-albums").click();
   await expect(rows(page, "artists").locator(".show-artist")).toHaveText(["Filename Artist", "Other Band", "The Testers"]);
 });
+
+test("an album's Create Playlist button makes a playlist of its songs and opens it", async ({ page }) => {
+  await modeButton(page, "albums").click();
+
+  await rows(page, "albums").filter({ hasText: "First Album" }).locator(".create-playlist").click();
+
+  await expect(page.locator(".alert")).toContainText("Playlist created");
+  await expect(page.locator("#name")).toHaveValue("The Testers - First Album");
+  await expect(page.locator("#playlist-mp3s .play-mp3")).toHaveText(["Opening Song", "Second Song"]);
+  await expect(page.locator(".library-button", { hasText: "Playlists" }).locator(".library-count")).toHaveText("2");
+});
+
+test("an artist's Create Playlist button makes a playlist named for the artist", async ({ page }) => {
+  await modeButton(page, "artists").click();
+
+  await rows(page, "artists").filter({ hasText: "Other Band" }).locator(".create-playlist").click();
+
+  await expect(page.locator("#name")).toHaveValue("Other Band");
+  await expect(page.locator("#playlist-mp3s .play-mp3")).toHaveText(["Encore"]);
+});
+
+test("creating a playlist whose name is taken adds a random suffix", async ({ page }) => {
+  await modeButton(page, "artists").click();
+  const button = rows(page, "artists").filter({ hasText: "Other Band" }).locator(".create-playlist");
+  await button.click();
+  await expect(page.locator("#name")).toHaveValue("Other Band");
+  await page.locator(".library-button", { hasText: "MP3s" }).click();
+  await modeButton(page, "artists").click();
+
+  await button.click();
+
+  await expect(page.locator(".alert")).toContainText("Playlist created");
+  await expect(page.locator("#name")).toHaveValue(/^Other Band [0-9a-f]{4}$/);
+  await expect(page.locator("#playlist-mp3s .play-mp3")).toHaveText(["Encore"]);
+});
+
+test("a failed playlist creation shows the error", async ({ page }) => {
+  await page.route((url) => url.pathname.endsWith("/playlist"), (route) => route.fulfill({ status: 500, body: "" }));
+  await modeButton(page, "albums").click();
+
+  await rows(page, "albums").filter({ hasText: "Live" }).locator(".create-playlist").click();
+
+  await expect(page.locator(".alert")).toHaveText(/Request failed \(500\)$/);
+});

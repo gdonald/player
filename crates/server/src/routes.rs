@@ -20,6 +20,7 @@ use tower_sessions::Session;
 use crate::app::AppState;
 use crate::error::{AppError, AppResult};
 use crate::params::Params;
+use crate::playlists::Collection;
 use crate::{library, mp3s, playlist_mp3s, playlists, queue, sources, users};
 
 pub const USER_ID: &str = "user_id";
@@ -31,7 +32,9 @@ pub fn api(state: AppState) -> Router<AppState> {
         .route("/mp3s", get(mp3s_index))
         .route("/mp3s/search", get(mp3s_search))
         .route("/albums", get(albums_index))
+        .route("/albums/{id}/playlist", post(albums_playlist))
         .route("/artists", get(artists_index))
+        .route("/artists/{id}/playlist", post(artists_playlist))
         .route(
             "/mp3s/{id}",
             get(mp3s_show).put(mp3s_update).patch(mp3s_update),
@@ -209,6 +212,32 @@ async fn artists_index(
     .await?;
 
     Ok(Json(ArtistsResponse { artists }))
+}
+
+async fn collection_playlist(
+    state: &AppState,
+    collection: Collection,
+) -> AppResult<Json<PlaylistResponse>> {
+    let playlist = playlists::create_from(&state.pool, collection).await?;
+
+    Ok(Json(PlaylistResponse {
+        message: Some("Playlist created".to_string()),
+        playlist,
+    }))
+}
+
+async fn albums_playlist(
+    State(state): State<AppState>,
+    Path(id): Path<i64>,
+) -> AppResult<Json<PlaylistResponse>> {
+    collection_playlist(&state, Collection::Album(id)).await
+}
+
+async fn artists_playlist(
+    State(state): State<AppState>,
+    Path(id): Path<i64>,
+) -> AppResult<Json<PlaylistResponse>> {
+    collection_playlist(&state, Collection::Artist(id)).await
 }
 
 async fn mp3s_show(

@@ -27,6 +27,21 @@ fn attributes(mp3_ids: &[i64]) -> Vec<PlaylistMp3Attributes> {
         .collect()
 }
 
+/// Makes a playlist of a whole album or artist and opens it.
+fn create_playlist_from(ctx: Ctx, path: String) {
+    spawn_local(async move {
+        let _waiting = ctx.wait();
+        match api::post::<PlaylistResponse>(&path, &serde_json::json!({})).await {
+            Ok(response) => {
+                ctx.message.set(response.message.unwrap_or_default());
+                ctx.load_counts();
+                ctx.page.set(Page::Playlist(response.playlist.id));
+            }
+            Err(error) => ctx.fail(&error),
+        }
+    });
+}
+
 fn load_playlists(ctx: Ctx, playlists: RwSignal<Vec<PlaylistListItem>>) {
     spawn_local(async move {
         match api::get::<PlaylistsResponse>("/api/playlists").await {
@@ -228,6 +243,7 @@ pub fn Mp3s() -> impl IntoView {
                             <th>{sort_header(album_sort, "album", "Album")}</th>
                             <th>{sort_header(album_sort, "artist", "Artist")}</th>
                             <th class="text-center tight">{sort_header(album_sort, "songs", "Songs")}</th>
+                            <th></th>
                         </tr>
                     </thead>
                     <tbody>
@@ -264,6 +280,17 @@ pub fn Mp3s() -> impl IntoView {
                                             </a>
                                         </td>
                                         <td class="text-center">{album.mp3s_count}</td>
+                                        <td class="tight">
+                                            <button
+                                                type="button"
+                                                class="btn btn-sm btn-primary create-playlist"
+                                                on:click=move |_: MouseEvent| {
+                                                    create_playlist_from(ctx, format!("/api/albums/{}/playlist", album.id));
+                                                }
+                                            >
+                                                "Create Playlist"
+                                            </button>
+                                        </td>
                                     </tr>
                                 }
                             }
@@ -286,6 +313,7 @@ pub fn Mp3s() -> impl IntoView {
                             <th>{sort_header(artist_sort, "artist", "Artist")}</th>
                             <th class="text-center tight">{sort_header(artist_sort, "albums", "Albums")}</th>
                             <th class="text-center tight">{sort_header(artist_sort, "songs", "Songs")}</th>
+                            <th></th>
                         </tr>
                     </thead>
                     <tbody>
@@ -322,6 +350,17 @@ pub fn Mp3s() -> impl IntoView {
                                             </a>
                                         </td>
                                         <td class="text-center">{artist.mp3s_count}</td>
+                                        <td class="tight">
+                                            <button
+                                                type="button"
+                                                class="btn btn-sm btn-primary create-playlist"
+                                                on:click=move |_: MouseEvent| {
+                                                    create_playlist_from(ctx, format!("/api/artists/{}/playlist", artist.id));
+                                                }
+                                            >
+                                                "Create Playlist"
+                                            </button>
+                                        </td>
                                     </tr>
                                 }
                             }

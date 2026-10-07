@@ -181,6 +181,79 @@ pub async fn create(pool: &PgPool, params: &PlaylistParams) -> AppResult<Playlis
     Ok(PlaylistSummary { id, name })
 }
 
+/// The songs a playlist is made from: one album's or one artist's.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum Collection {
+    Album(i64),
+    Artist(i64),
+}
+
+/// Creates a playlist of every song on an album, named "Artist - Album" and
+/// in track order, or of every song by an artist, named for the artist and in
+/// album then track order. A taken name gets a random suffix.
+pub async fn create_from(pool: &PgPool, collection: Collection) -> AppResult<PlaylistSummary> {
+    let (name_query, songs, order, source_id) = match collection {
+        Collection::Album(id) => (
+            "SELECT ar.name || ' - ' || al.name FROM albums al \
+             JOIN artists ar ON ar.id = al.artist_id WHERE al.id = $1",
+            "m.album_id = $2",
+            "m.track NULLS LAST, m.title, m.id",
+            id,
+        ),
+        Collection::Artist(id) => (
+            "SELECT name FROM artists WHERE id = $1",
+            "m.artist_id = $2",
+            "al.name, m.track NULLS LAST, m.title, m.id",
+            id,
+        ),
+    };
+
+    let mut transaction = pool.begin().await?;
+
+    let name: String = sqlx::query_scalar(name_query)
+        .bind(source_id)
+        .fetch_optional(&mut *transaction)
+        .await?
+        .ok_or(AppError::NotFound)?;
+
+    // A taken name gets a random four-character suffix until one is free.
+    let mut candidate = name.clone();
+    let id = loop {
+        let inserted: Option<i64> = sqlx::query_scalar(
+            "INSERT INTO playlists (name) VALUES ($1) ON CONFLICT (name) DO NOTHING RETURNING id",
+        )
+        .bind(&candidate)
+        .fetch_optional(&mut *transaction)
+        .await?;
+
+        if let Some(id) = inserted {
+            break id;
+        }
+
+        let suffix: String = sqlx::query_scalar("SELECT substr(md5(random()::text), 1, 4)")
+            .fetch_one(&mut *transaction)
+            .await?;
+        candidate = format!("{name} {suffix}");
+    };
+
+    sqlx::query(&format!(
+        "INSERT INTO playlist_mp3s (playlist_id, mp3_id, position) \
+         SELECT $1, m.id, (ROW_NUMBER() OVER (ORDER BY {order}))::int \
+         FROM mp3s m JOIN albums al ON al.id = m.album_id WHERE {songs}"
+    ))
+    .bind(id)
+    .bind(source_id)
+    .execute(&mut *transaction)
+    .await?;
+
+    transaction.commit().await?;
+
+    Ok(PlaylistSummary {
+        id,
+        name: candidate,
+    })
+}
+
 pub async fn update(pool: &PgPool, id: i64, params: &PlaylistParams) -> AppResult<PlaylistSummary> {
     let mut transaction = pool.begin().await?;
 
