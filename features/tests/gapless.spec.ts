@@ -346,8 +346,15 @@ test("the buffering overlay shows while a song loads and nothing plays", async (
 
   const overlay = page.locator("#buffering");
   await expect(overlay).toBeVisible();
-  await expect(overlay).toContainText("Buffering...");
+  await expect(overlay.locator(".buffering-text")).toHaveText("Buffering...");
   await expect(overlay.locator(".buffering-notes i")).toHaveCount(3);
+
+  const viewport = page.viewportSize()!;
+  const covered = (await overlay.boundingBox())!;
+  expect(covered).toEqual({ x: 0, y: 0, width: viewport.width, height: viewport.height });
+  const text = (await overlay.locator(".buffering-text").boundingBox())!;
+  const notes = (await overlay.locator(".buffering-notes").boundingBox())!;
+  expect(text.y + text.height).toBeLessThanOrEqual(notes.y);
 
   release();
 

@@ -255,12 +255,12 @@ pub fn Player() -> impl IntoView {
             </div>
             <Show when=move || engine.loading.get()>
                 <div class="buffering" id="buffering" role="status">
+                    <span class="buffering-text">"Buffering..."</span>
                     <div class="buffering-notes" aria-hidden="true">
                         <i class="bi-music-note"></i>
                         <i class="bi-music-note-beamed"></i>
                         <i class="bi-music-note"></i>
                     </div>
-                    <span>"Buffering..."</span>
                 </div>
             </Show>
             <div class="player-body">

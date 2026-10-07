@@ -542,9 +542,9 @@ p.text-center {
 .buffering {
   background: rgba(8, 9, 10, 0.85);
   color: var(--ch-display);
-  font-size: 13px;
+  font-size: 24px;
   font-weight: 700;
-  letter-spacing: 1px;
+  letter-spacing: 2px;
 }
 
 /* Request spinner */
