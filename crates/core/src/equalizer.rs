@@ -238,6 +238,121 @@ pub fn parse(stored: Option<&str>) -> Settings {
     }
 }
 
+/// A preset the user saved: a name, the preamp, and the band gains.
+#[derive(Debug, Clone, PartialEq)]
+pub struct SavedPreset {
+    pub name: String,
+    pub preamp: f32,
+    pub gains: Gains,
+}
+
+/// Why a name cannot be saved.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum NameProblem {
+    Blank,
+    BuiltIn,
+}
+
+impl NameProblem {
+    pub fn message(self) -> &'static str {
+        match self {
+            NameProblem::Blank => "Enter a name",
+            NameProblem::BuiltIn => "A built-in preset has that name",
+        }
+    }
+}
+
+/// Saved presets as kept in `localStorage`: one `preamp;bands;name` line
+/// each. The name comes last so it can hold semicolons.
+pub fn serialize_saved(presets: &[SavedPreset]) -> String {
+    presets
+        .iter()
+        .map(|preset| {
+            let gains: Vec<String> = preset.gains.iter().map(ToString::to_string).collect();
+            format!("{};{};{}", preset.preamp, gains.join(","), preset.name)
+        })
+        .collect::<Vec<_>>()
+        .join("\n")
+}
+
+/// Reads stored saved presets, skipping lines that do not parse.
+pub fn parse_saved(stored: Option<&str>) -> Vec<SavedPreset> {
+    stored
+        .unwrap_or_default()
+        .lines()
+        .filter_map(|line| {
+            let mut parts = line.splitn(3, ';');
+            let preamp = parts.next()?.trim().parse::<f32>().ok()?;
+            let gains = parse_gains(parts.next()?)?;
+            let name = parts.next()?.trim().to_string();
+
+            (!name.is_empty()).then(|| SavedPreset {
+                name,
+                preamp: clamp_gain(preamp),
+                gains: gains.map(clamp_gain),
+            })
+        })
+        .collect()
+}
+
+/// The saved presets with this one added, or replacing a saved preset of the
+/// same name. A blank name or a built-in preset's name cannot be saved.
+pub fn save_preset(
+    presets: &[SavedPreset],
+    name: &str,
+    preamp: f32,
+    gains: Gains,
+) -> Result<Vec<SavedPreset>, NameProblem> {
+    let name = name.trim();
+
+    if name.is_empty() {
+        return Err(NameProblem::Blank);
+    }
+    if name == CUSTOM || preset(name).is_some() {
+        return Err(NameProblem::BuiltIn);
+    }
+
+    let mut saved: Vec<SavedPreset> = presets
+        .iter()
+        .filter(|preset| preset.name != name)
+        .cloned()
+        .collect();
+    saved.push(SavedPreset {
+        name: name.to_string(),
+        preamp,
+        gains,
+    });
+
+    Ok(saved)
+}
+
+/// The gains a menu choice sets, and the preamp when the choice is a saved
+/// preset. Built-in presets leave the preamp alone.
+pub fn choose(name: &str, saved: &[SavedPreset]) -> Option<(Gains, Option<f32>)> {
+    preset(name).map(|preset| (preset.gains, None)).or_else(|| {
+        saved
+            .iter()
+            .find(|preset| preset.name == name)
+            .map(|preset| (preset.gains, Some(preset.preamp)))
+    })
+}
+
+/// The menu choice that matches these settings: a saved preset with the same
+/// bands and preamp, a built-in preset with the same bands, or `Custom`.
+#[allow(
+    clippy::float_cmp,
+    reason = "gains move in 0.5 dB steps, which f32 holds exactly"
+)]
+pub fn selected(settings: &Settings, saved: &[SavedPreset]) -> String {
+    saved
+        .iter()
+        .find(|preset| preset.gains == settings.gains && preset.preamp == settings.preamp)
+        .map_or_else(
+            || preset_name(&settings.gains).to_string(),
+            |preset| preset.name.clone(),
+        )
+}
+
 #[cfg(test)]
 #[allow(
     clippy::float_cmp,
@@ -447,5 +562,126 @@ mod tests {
         ] {
             assert_eq!(parse(stored), Settings::default(), "{stored:?}");
         }
+    }
+
+    fn saved(name: &str, preamp: f32, first_gain: f32) -> SavedPreset {
+        let mut gains = FLAT;
+        gains[0] = first_gain;
+
+        SavedPreset {
+            name: name.to_string(),
+            preamp,
+            gains,
+        }
+    }
+
+    #[test]
+    fn saved_presets_read_back_from_storage() {
+        let presets = vec![saved("Late Night", -3.0, 4.5), saved("A;B", 0.0, -2.0)];
+
+        assert_eq!(parse_saved(Some(&serialize_saved(&presets))), presets);
+    }
+
+    #[test]
+    fn stored_lines_that_do_not_parse_are_skipped() {
+        let stored = "nope\n0;1,2;Short\n0;0,0,0,0,0,0,0,0,0,0;   \n2;0,0,0,0,0,0,0,0,0,0;Kept\n0;0,0,0,0,0,0,0,0,0,0\nx;0,0,0,0,0,0,0,0,0,0;Bad";
+
+        let names: Vec<String> = parse_saved(Some(stored))
+            .into_iter()
+            .map(|preset| preset.name)
+            .collect();
+
+        assert_eq!(names, vec!["Kept"]);
+        assert_eq!(parse_saved(None), Vec::new());
+    }
+
+    #[test]
+    fn stored_gains_are_clamped() {
+        let preset = &parse_saved(Some("40;99,0,0,0,0,0,0,0,0,0;Loud"))[0];
+
+        assert_eq!((preset.preamp, preset.gains[0]), (MAX_GAIN, MAX_GAIN));
+    }
+
+    #[test]
+    fn saving_adds_a_preset_with_a_trimmed_name() {
+        let presets = save_preset(&[], "  Late Night ", -3.0, FLAT).unwrap();
+
+        assert_eq!(presets, vec![saved("Late Night", -3.0, 0.0)]);
+    }
+
+    #[test]
+    fn saving_under_a_saved_name_replaces_that_preset() {
+        let presets = save_preset(
+            &[saved("Mine", 0.0, 1.0), saved("Other", 0.0, 2.0)],
+            "Mine",
+            1.0,
+            FLAT,
+        )
+        .unwrap();
+
+        assert_eq!(
+            presets,
+            vec![saved("Other", 0.0, 2.0), saved("Mine", 1.0, 0.0)]
+        );
+    }
+
+    #[test]
+    fn blank_and_built_in_names_cannot_be_saved() {
+        assert_eq!(save_preset(&[], "  ", 0.0, FLAT), Err(NameProblem::Blank));
+        assert_eq!(
+            save_preset(&[], "Rock", 0.0, FLAT),
+            Err(NameProblem::BuiltIn)
+        );
+        assert_eq!(
+            save_preset(&[], CUSTOM, 0.0, FLAT),
+            Err(NameProblem::BuiltIn)
+        );
+        assert_eq!(NameProblem::Blank.message(), "Enter a name");
+        assert_eq!(
+            NameProblem::BuiltIn.message(),
+            "A built-in preset has that name"
+        );
+    }
+
+    #[test]
+    fn choosing_a_built_in_preset_keeps_the_preamp_and_a_saved_one_sets_it() {
+        let presets = vec![saved("Mine", -4.0, 3.0)];
+
+        assert_eq!(
+            choose("Rock", &presets),
+            preset("Rock").map(|rock| (rock.gains, None))
+        );
+        assert_eq!(
+            choose("Mine", &presets),
+            Some((presets[0].gains, Some(-4.0)))
+        );
+        assert_eq!(choose("Nothing", &presets), None);
+    }
+
+    #[test]
+    fn the_selection_names_the_matching_preset() {
+        let presets = vec![saved("Mine", -4.0, 3.0)];
+        let mine = Settings {
+            enabled: true,
+            preamp: -4.0,
+            gains: presets[0].gains,
+        };
+
+        assert_eq!(selected(&Settings::default(), &presets), "Flat");
+        assert_eq!(
+            selected(&Settings::default(), &[saved("Quiet Flat", 0.0, 0.0)]),
+            "Quiet Flat"
+        );
+        assert_eq!(selected(&mine, &presets), "Mine");
+        assert_eq!(
+            selected(
+                &Settings {
+                    preamp: 0.0,
+                    ..mine
+                },
+                &presets
+            ),
+            CUSTOM
+        );
     }
 }

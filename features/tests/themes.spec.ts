@@ -164,3 +164,13 @@ test("the login page uses the default theme after logging out when no theme was 
     .poll(() => page.locator("#login .winamp-titlebar span").evaluate((title) => getComputedStyle(title).color))
     .toBe(DEFAULT_TITLE_COLOR);
 });
+
+test("the theme picker sits just left of the logout button in the player's title bar", async ({ page }) => {
+  const picker = (await page.locator("#player .winamp-titlebar #theme-select").boundingBox())!;
+  const logout = (await page.locator("#logout").boundingBox())!;
+
+  expect(picker.x + picker.width).toBeLessThanOrEqual(logout.x);
+  expect(logout.x - (picker.x + picker.width)).toBeLessThanOrEqual(4);
+  expect(Math.abs(picker.y - logout.y)).toBeLessThanOrEqual(2);
+  await expect(page.locator(".library #theme-select")).toHaveCount(0);
+});

@@ -12,7 +12,7 @@ use crate::playlists::{PlaylistEdit, Playlists};
 use crate::sources::{SourceEdit, Sources};
 use crate::state::{Ctx, Page, ctx};
 use crate::storage;
-use crate::theme::{self, ThemePicker};
+use crate::theme;
 
 const PLAYLIST_OPEN_KEY: &str = "player.playlist.open";
 use crate::visualizer::Visualizer;
@@ -244,7 +244,6 @@ fn Menu() -> impl IntoView {
     view! {
         <div class="winamp-window library">
             <div class="winamp-titlebar">
-                <ThemePicker />
                 <span>"LIBRARY"</span>
                 <Wait />
             </div>

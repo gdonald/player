@@ -139,6 +139,116 @@ test("settings are kept across a reload", async ({ page }) => {
   await expect(page.locator("#equalizer-preset")).toHaveValue("Treble Boost");
 });
 
+function storedPresets(page: Page) {
+  return page.evaluate(() => window.localStorage.getItem("player.equalizer.presets"));
+}
+
+async function savePreset(page: Page, name: string) {
+  await page.click("#equalizer-save");
+  await page.fill("#preset-name", name);
+  await page.click("#preset-save");
+}
+
+test("the save button opens a dialog with the name field focused", async ({ page }) => {
+  await openPanel(page);
+
+  await page.click("#equalizer-save");
+
+  await expect(page.locator("#preset-dialog .winamp-titlebar")).toHaveText("SAVE PRESET");
+  await expect(page.locator("#preset-name")).toBeFocused();
+});
+
+test("saving a preset keeps the bands and preamp under its name", async ({ page }) => {
+  await openPanel(page);
+  await page.selectOption("#equalizer-preset", "Rock");
+  await page.locator("#equalizer-preamp").fill("-3");
+
+  await savePreset(page, "  Late Night ");
+
+  await expect(page.locator("#preset-dialog")).toHaveCount(0);
+  await expect(page.locator("#equalizer-preset")).toHaveValue("Late Night");
+  await expect.poll(() => storedPresets(page)).toBe("-3;5,4,2,-1,-2,-1,1,3,4,5;Late Night");
+});
+
+test("pressing Enter in the name field saves the preset", async ({ page }) => {
+  await openPanel(page);
+  await page.locator("#equalizer-band-0").fill("6");
+  await page.click("#equalizer-save");
+
+  await page.fill("#preset-name", "Low End");
+  await page.press("#preset-name", "Enter");
+
+  await expect(page.locator("#preset-dialog")).toHaveCount(0);
+  await expect(page.locator("#equalizer-preset")).toHaveValue("Low End");
+});
+
+test("cancel and Escape close the dialog without saving", async ({ page }) => {
+  await openPanel(page);
+  await page.click("#equalizer-save");
+  await page.fill("#preset-name", "Unsaved");
+  await page.press("#preset-name", "a");
+
+  await page.click("#preset-cancel");
+  await expect(page.locator("#preset-dialog")).toHaveCount(0);
+
+  await page.click("#equalizer-save");
+  await expect(page.locator("#preset-name")).toHaveValue("");
+  await page.press("#preset-name", "Escape");
+
+  await expect(page.locator("#preset-dialog")).toHaveCount(0);
+  expect(await storedPresets(page)).toBeNull();
+});
+
+test("a blank or built-in name is refused with a message", async ({ page }) => {
+  await openPanel(page);
+  await page.click("#equalizer-save");
+
+  await page.click("#preset-save");
+  await expect(page.locator("#preset-error")).toHaveText("Enter a name");
+
+  await page.fill("#preset-name", "Rock");
+  await page.click("#preset-save");
+  await expect(page.locator("#preset-error")).toHaveText("A built-in preset has that name");
+  await expect(page.locator("#preset-dialog")).toBeVisible();
+});
+
+test("choosing a saved preset sets its bands and preamp", async ({ page }) => {
+  await openPanel(page);
+  await page.selectOption("#equalizer-preset", "Vocal");
+  await page.locator("#equalizer-preamp").fill("-4");
+  await savePreset(page, "Talk");
+  await page.click("#equalizer-reset");
+  await page.click("#equalizer-on");
+
+  await page.selectOption("#equalizer-preset", "Talk");
+
+  await expect(gainLabels(page)).toHaveText(["-4", "-2", "-2", "-1", "0", "+2", "+4", "+4", "+3", "+1", "0"]);
+  await expect(page.locator("#equalizer-on")).toHaveAttribute("aria-pressed", "true");
+});
+
+test("saving under a saved name replaces that preset", async ({ page }) => {
+  await openPanel(page);
+  await savePreset(page, "Mine");
+  await page.locator("#equalizer-band-9").fill("3");
+
+  await savePreset(page, "Mine");
+
+  await expect(page.locator("#equalizer-preset option", { hasText: "Mine" })).toHaveCount(1);
+  await expect.poll(() => storedPresets(page)).toBe("0;0,0,0,0,0,0,0,0,0,3;Mine");
+});
+
+test("saved presets are kept across a reload", async ({ page }) => {
+  await openPanel(page);
+  await page.locator("#equalizer-band-2").fill("2");
+  await savePreset(page, "Kept");
+
+  await page.reload();
+  await expect(panel(page)).toBeVisible();
+
+  await expect(page.locator("#equalizer-preset option")).toContainText(["Kept"]);
+  await expect(page.locator("#equalizer-preset")).toHaveValue("Kept");
+});
+
 test("playback keeps going through the equalizer", async ({ page }) => {
   await openPanel(page);
   await page.selectOption("#equalizer-preset", "Bass Boost");

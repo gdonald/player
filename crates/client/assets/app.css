@@ -77,19 +77,24 @@ body,
   padding: 0 6px;
 }
 
-.theme-select {
+/* The theme picker and the logout button, at the right end of the
+   player's title bar. */
+.titlebar-controls {
   position: absolute;
   top: 0;
-  left: 0;
+  right: 0;
+  display: flex;
+  gap: 2px;
+  height: 14px;
+}
+
+.theme-select {
   height: 14px;
   padding: 0 2px;
   cursor: pointer;
 }
 
 .winamp-titlebar .logout {
-  position: absolute;
-  top: 0;
-  right: 0;
   min-width: 0;
   height: 14px;
   padding: 0 3px;
@@ -236,6 +241,36 @@ body,
 .player-toggles {
   display: flex;
   align-items: center;
+  justify-content: flex-end;
+  gap: 4px;
+}
+
+/* Save preset dialog */
+
+.dialog-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 2100;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+}
+
+.dialog {
+  width: 100%;
+  max-width: 260px;
+}
+
+.dialog-body {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 6px 8px 8px;
+}
+
+.dialog-buttons {
+  display: flex;
   justify-content: flex-end;
   gap: 4px;
 }

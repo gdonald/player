@@ -531,6 +531,12 @@ p.text-center {
   color: var(--st-list-text);
 }
 
+/* Save preset dialog */
+
+.dialog-backdrop {
+  background: rgba(0, 0, 0, 0.6);
+}
+
 /* Buffering overlay */
 
 .buffering {

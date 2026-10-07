@@ -107,7 +107,7 @@ body {
 
 .theme-select {
   border: none;
-  border-right: 1px solid var(--sa-outline);
+  border-left: 1px solid var(--sa-outline);
   border-radius: 0;
   background: var(--sa-title);
   color: var(--sa-title-text);
@@ -543,6 +543,12 @@ body {
 
 p.text-center {
   color: var(--sa-list-text);
+}
+
+/* Save preset dialog */
+
+.dialog-backdrop {
+  background: rgba(0, 0, 0, 0.6);
 }
 
 /* Buffering overlay */

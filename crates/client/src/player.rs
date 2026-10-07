@@ -11,6 +11,7 @@ use web_sys::{
 use crate::audio_graph::Transport;
 use crate::state::ctx;
 use crate::storage;
+use crate::theme::ThemePicker;
 
 const VOLUME_KEY: &str = "player.volume";
 /// The marquee box's left and right padding together, in pixels.
@@ -242,16 +243,19 @@ pub fn Player() -> impl IntoView {
         <div class="winamp-window player" id="player">
             <div class="winamp-titlebar">
                 <span>"PLAYER"</span>
-                <button
-                    type="button"
-                    class="winamp-button logout"
-                    id="logout"
-                    title="Log out"
-                    aria-label="Log out"
-                    on:click=move |_: MouseEvent| ctx.log_out()
-                >
-                    <i class="bi-box-arrow-right"></i>
-                </button>
+                <div class="titlebar-controls">
+                    <ThemePicker />
+                    <button
+                        type="button"
+                        class="winamp-button logout"
+                        id="logout"
+                        title="Log out"
+                        aria-label="Log out"
+                        on:click=move |_: MouseEvent| ctx.log_out()
+                    >
+                        <i class="bi-box-arrow-right"></i>
+                    </button>
+                </div>
             </div>
             <Show when=move || engine.loading.get()>
                 <div class="buffering" id="buffering" role="status">
