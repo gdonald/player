@@ -2,29 +2,20 @@ use leptos::ev::{KeyboardEvent, MouseEvent, SubmitEvent};
 use leptos::html;
 use leptos::prelude::*;
 use player_core::equalizer::{self, BANDS, CUSTOM, FLAT, Gains, NameProblem, PRESETS, SavedPreset};
+use player_core::settings::EQUALIZER_OPEN;
 
+use crate::settings;
 use crate::state::ctx;
-use crate::storage;
 
-const OPEN_KEY: &str = "player.equalizer.open";
-const PRESETS_KEY: &str = "player.equalizer.presets";
 const CURVE_WIDTH: f32 = 90.0;
 const CURVE_HEIGHT: f32 = 20.0;
 
 fn stored_open() -> bool {
-    storage::get(OPEN_KEY).is_some_and(|stored| stored == "true")
+    settings::get(ctx(), EQUALIZER_OPEN) == "true"
 }
 
 fn store_open(open: bool) {
-    storage::set(OPEN_KEY, &open.to_string());
-}
-
-fn stored_presets() -> Vec<SavedPreset> {
-    equalizer::parse_saved(storage::get(PRESETS_KEY).as_deref())
-}
-
-fn store_presets(presets: &[SavedPreset]) {
-    storage::set(PRESETS_KEY, &equalizer::serialize_saved(presets));
+    settings::set(ctx(), EQUALIZER_OPEN, open.to_string());
 }
 
 #[component]
@@ -49,7 +40,6 @@ fn SavePresetDialog(saved: RwSignal<Vec<SavedPreset>>, open: RwSignal<bool>) -> 
             current.gains,
         ) {
             Ok(presets) => {
-                store_presets(&presets);
                 saved.set(presets);
                 open.set(false);
             }
@@ -118,7 +108,7 @@ fn slider_style(gain: f32) -> String {
 pub fn Equalizer() -> impl IntoView {
     let settings = ctx().engine.settings;
     let open = RwSignal::new(stored_open());
-    let saved = RwSignal::new(stored_presets());
+    let saved = ctx().presets;
     let saving = RwSignal::new(false);
 
     Effect::new(move |_| store_open(open.get()));

@@ -12,22 +12,11 @@ use web_sys::{
 };
 
 use crate::api::{self, ApiError};
-use crate::storage;
-
-const SETTINGS_KEY: &str = "player.equalizer";
 
 /// 4096 samples gives 2048 bins about 11 Hz wide, fine enough to keep the
 /// lowest analyzer bars apart.
 const FFT_SIZE: u32 = 4096;
 const SMOOTHING: f64 = 0.6;
-
-fn stored_settings() -> Settings {
-    equalizer::parse(storage::get(SETTINGS_KEY).as_deref())
-}
-
-fn store_settings(settings: &Settings) {
-    storage::set(SETTINGS_KEY, &equalizer::serialize(settings));
-}
 
 /// What the player is doing.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -464,7 +453,7 @@ impl Engine {
             transport: RwSignal::new(Transport::Stopped),
             duration: RwSignal::new(0.0),
             loading: RwSignal::new(false),
-            settings: RwSignal::new(stored_settings()),
+            settings: RwSignal::new(Settings::default()),
             ended: RwSignal::new(None),
             failure: RwSignal::new(None),
         }
@@ -481,14 +470,13 @@ impl Engine {
         self.inner.with_value(Option::is_some)
     }
 
-    /// Applies and keeps the equalizer settings, and resumes the audio
+    /// Applies the equalizer settings, and resumes the audio
     /// context on clicks and key presses. The engine lasts as long as the
     /// page, so the listeners stay.
     pub fn run(self) {
         Effect::new(move |_| {
             let current = self.settings.get();
             self.with_inner(|inner| inner.graph.apply(&current));
-            store_settings(&current);
         });
 
         let resume = move || {

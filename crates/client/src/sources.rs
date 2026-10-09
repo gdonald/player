@@ -7,6 +7,7 @@ use player_types::{
 };
 
 use crate::api::{self, errors_for};
+use crate::confirm::ConfirmModal;
 use crate::state::{Page, ctx};
 
 #[component]
@@ -133,78 +134,25 @@ pub fn Sources() -> impl IntoView {
                 removing
                     .get()
                     .map(|source| {
+                        let id = source.id;
+
                         view! {
-                            <RemoveSourceModal
-                                source
-                                on_confirm=Callback::new(remove)
+                            <ConfirmModal
+                                title="Remove Source"
+                                confirm_label="Remove"
+                                on_confirm=Callback::new(move |()| remove(id))
                                 on_cancel=Callback::new(move |()| removing.set(None))
-                            />
+                            >
+                                <p>"Remove " <b>{source.path}</b> " from the library?"</p>
+                                <p class="mb-0">
+                                    "Its " {source.mp3s_count}
+                                    " MP3s will be removed from the library, playlists, and queue. The files are not deleted."
+                                </p>
+                            </ConfirmModal>
                         }
                     })
             }}
         </div>
-    }
-}
-
-#[component]
-fn RemoveSourceModal(
-    source: SourceListItem,
-    on_confirm: Callback<i64>,
-    on_cancel: Callback<()>,
-) -> impl IntoView {
-    let id = source.id;
-
-    view! {
-        <div
-            class="modal d-block"
-            id="remove-source-modal"
-            tabindex="-1"
-            role="dialog"
-            aria-modal="true"
-            aria-labelledby="remove-source-title"
-        >
-            <div class="modal-dialog modal-dialog-centered">
-                <div class="modal-content">
-                    <div class="modal-header">
-                        <h5 class="modal-title" id="remove-source-title">
-                            "Remove Source"
-                        </h5>
-                        <button
-                            type="button"
-                            class="btn-close"
-                            aria-label="Close"
-                            on:click=move |_| on_cancel.run(())
-                        ></button>
-                    </div>
-                    <div class="modal-body">
-                        <p>"Remove " <b>{source.path}</b> " from the library?"</p>
-                        <p class="mb-0">
-                            "Its " {source.mp3s_count}
-                            " MP3s will be removed from the library, playlists, and queue. The files are not deleted."
-                        </p>
-                    </div>
-                    <div class="modal-footer">
-                        <button
-                            type="button"
-                            class="btn btn-secondary"
-                            id="cancel-remove-source"
-                            on:click=move |_| on_cancel.run(())
-                        >
-                            "Cancel"
-                        </button>
-                        <button
-                            type="button"
-                            class="btn btn-danger"
-                            id="confirm-remove-source"
-                            on:click=move |_| on_confirm.run(id)
-                        >
-                            "Remove"
-                        </button>
-                    </div>
-                </div>
-            </div>
-        </div>
-        <div class="modal-backdrop show"></div>
     }
 }
 

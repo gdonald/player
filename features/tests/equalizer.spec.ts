@@ -1,6 +1,6 @@
 import { Page } from "@playwright/test";
 import { expect, test } from "./fixtures";
-import { logIn, mp3Row, position, queueTitles, resetData, transport } from "./helpers";
+import { logIn, mp3Row, position, queueTitles, resetData, storedSetting, transport } from "./helpers";
 
 test.beforeEach(async ({ page, request }) => {
   await resetData(request);
@@ -20,8 +20,8 @@ function gainLabels(page: Page) {
   return page.locator(".equalizer-gain");
 }
 
-function storedSettings(page: Page) {
-  return page.evaluate(() => window.localStorage.getItem("player.equalizer"));
+function storedSettings() {
+  return storedSetting("equalizer");
 }
 
 test("the equalizer button opens and closes the panel", async ({ page }) => {
@@ -35,10 +35,12 @@ test("the equalizer button opens and closes the panel", async ({ page }) => {
 
 test("the open or closed panel is kept across a reload", async ({ page }) => {
   await openPanel(page);
+  await expect.poll(() => storedSetting("equalizer_open")).toBe("true");
   await page.reload();
   await expect(panel(page)).toBeVisible();
 
   await page.click("#equalizer-toggle");
+  await expect.poll(() => storedSetting("equalizer_open")).toBe("false");
   await page.reload();
   await expect(page.locator(".library-nav")).toBeVisible();
   await expect(panel(page)).toHaveCount(0);
@@ -103,7 +105,7 @@ test("the preamp slider sets the preamp and turns the equalizer on", async ({ pa
 
   await expect(gainLabels(page).first()).toHaveText("-6");
   await expect(page.locator("#equalizer-on")).toHaveAttribute("aria-pressed", "true");
-  await expect.poll(() => storedSettings(page)).toBe("on;-6;0,0,0,0,0,0,0,0,0,0");
+  await expect.poll(() => storedSettings()).toBe("on;-6;0,0,0,0,0,0,0,0,0,0");
 });
 
 test("the curve follows the bands", async ({ page }) => {
@@ -130,7 +132,7 @@ test("turning the equalizer off keeps the bands", async ({ page }) => {
 test("settings are kept across a reload", async ({ page }) => {
   await openPanel(page);
   await page.selectOption("#equalizer-preset", "Treble Boost");
-  await expect.poll(() => storedSettings(page)).toBe("on;0;0,0,0,0,0,1,2,4,5,6");
+  await expect.poll(() => storedSettings()).toBe("on;0;0,0,0,0,0,1,2,4,5,6");
 
   await page.reload();
   await expect(panel(page)).toBeVisible();
@@ -139,8 +141,8 @@ test("settings are kept across a reload", async ({ page }) => {
   await expect(page.locator("#equalizer-preset")).toHaveValue("Treble Boost");
 });
 
-function storedPresets(page: Page) {
-  return page.evaluate(() => window.localStorage.getItem("player.equalizer.presets"));
+function storedPresets() {
+  return storedSetting("equalizer_presets");
 }
 
 async function savePreset(page: Page, name: string) {
@@ -167,7 +169,7 @@ test("saving a preset keeps the bands and preamp under its name", async ({ page 
 
   await expect(page.locator("#preset-dialog")).toHaveCount(0);
   await expect(page.locator("#equalizer-preset")).toHaveValue("Late Night");
-  await expect.poll(() => storedPresets(page)).toBe("-3;5,4,2,-1,-2,-1,1,3,4,5;Late Night");
+  await expect.poll(() => storedPresets()).toBe("-3;5,4,2,-1,-2,-1,1,3,4,5;Late Night");
 });
 
 test("pressing Enter in the name field saves the preset", async ({ page }) => {
@@ -196,7 +198,7 @@ test("cancel and Escape close the dialog without saving", async ({ page }) => {
   await page.press("#preset-name", "Escape");
 
   await expect(page.locator("#preset-dialog")).toHaveCount(0);
-  expect(await storedPresets(page)).toBeNull();
+  expect(await storedPresets()).toBeNull();
 });
 
 test("a blank or built-in name is refused with a message", async ({ page }) => {
@@ -234,13 +236,15 @@ test("saving under a saved name replaces that preset", async ({ page }) => {
   await savePreset(page, "Mine");
 
   await expect(page.locator("#equalizer-preset option", { hasText: "Mine" })).toHaveCount(1);
-  await expect.poll(() => storedPresets(page)).toBe("0;0,0,0,0,0,0,0,0,0,3;Mine");
+  await expect.poll(() => storedPresets()).toBe("0;0,0,0,0,0,0,0,0,0,3;Mine");
 });
 
 test("saved presets are kept across a reload", async ({ page }) => {
   await openPanel(page);
   await page.locator("#equalizer-band-2").fill("2");
   await savePreset(page, "Kept");
+  await expect.poll(() => storedPresets()).toBe("0;0,0,2,0,0,0,0,0,0,0;Kept");
+  await expect.poll(() => storedSettings()).toBe("on;0;0,0,2,0,0,0,0,0,0,0");
 
   await page.reload();
   await expect(panel(page)).toBeVisible();
@@ -266,4 +270,43 @@ test("the panel shows under the playlist", async ({ page }, testInfo) => {
   await expect(page.locator("#equalizer-on")).toHaveAttribute("aria-pressed", "true");
 
   await page.screenshot({ path: testInfo.outputPath("equalizer.png"), animations: "disabled" });
+});
+
+test("settings and presets follow the user to a browser with nothing stored", async ({ page }) => {
+  await openPanel(page);
+  await page.selectOption("#equalizer-preset", "Rock");
+  await savePreset(page, "Late Night");
+  await expect.poll(() => storedPresets()).toBe("0;5,4,2,-1,-2,-1,1,3,4,5;Late Night");
+  await expect.poll(() => storedSettings()).toBe("on;0;5,4,2,-1,-2,-1,1,3,4,5");
+
+  await page.evaluate(() => window.localStorage.clear());
+  await page.reload();
+  await expect(panel(page)).toBeVisible();
+
+  await expect(page.locator("#equalizer-on")).toHaveAttribute("aria-pressed", "true");
+  await expect(page.locator("#equalizer-preset")).toHaveValue("Late Night");
+});
+
+test("settings this browser kept before are uploaded when the server has none", async ({ page }) => {
+  await page.addInitScript(() => {
+    window.localStorage.setItem("player.equalizer", "on;-2;0,0,0,0,0,1,2,4,5,6");
+    window.localStorage.setItem("player.equalizer.presets", "1;1,1,1,1,1,1,1,1,1,1;Kept");
+  });
+
+  await page.reload();
+
+  await expect.poll(() => storedSettings()).toBe("on;-2;0,0,0,0,0,1,2,4,5,6");
+  await expect.poll(() => storedPresets()).toBe("1;1,1,1,1,1,1,1,1,1,1;Kept");
+});
+
+test("the server's settings win over ones this browser kept before", async ({ page }) => {
+  await openPanel(page);
+  await page.selectOption("#equalizer-preset", "Jazz");
+  await expect.poll(() => storedSettings()).toBe("on;0;3,2,1,2,-1,-1,0,1,2,3");
+  await page.evaluate(() => window.localStorage.setItem("player.equalizer", "off;0;0,0,0,0,0,0,0,0,0,0"));
+
+  await page.reload();
+  await expect(panel(page)).toBeVisible();
+
+  await expect(page.locator("#equalizer-preset")).toHaveValue("Jazz");
 });

@@ -1,18 +1,6 @@
 import { Page } from "@playwright/test";
 import { expect, test } from "./fixtures";
-import {
-  currentQueueRow,
-  logIn,
-  mp3Id,
-  mp3Row,
-  position,
-  queueTitles,
-  resetData,
-  sql,
-  songLength,
-  transport,
-  waitUntilPlaying,
-} from "./helpers";
+import { currentQueueRow, logIn, mp3Id, mp3Row, position, queueTitles, resetData, songLength, sql, storedSetting, transport, waitUntilPlaying } from "./helpers";
 
 test.beforeEach(async ({ page, request }) => {
   await resetData(request);
@@ -149,7 +137,7 @@ test("the space bar pauses and resumes after clicking next instead of pressing n
   await page.keyboard.press(" ");
   await waitUntilPlaying(page);
   await expect(currentQueueRow(page)).toContainText("Opening Song");
-  expect(await queueTitles(page)).toEqual(["Opening Song", "Second Song"]);
+  await expect.poll(() => queueTitles(page)).toEqual(["Opening Song", "Second Song"]);
 });
 
 test("the space bar pauses and resumes after moving the seek bar", async ({ page }) => {
@@ -247,6 +235,7 @@ test("the volume slider sets the volume and is remembered", async ({ page }) => 
 
   await expect.poll(() => volumeLevel(page)).toBeCloseTo(0.3);
   await expect(page.locator("#player-mute i")).toHaveClass("bi-volume-down-fill");
+  await expect.poll(() => storedSetting("volume")).toBe("0.3");
 
   await page.reload();
   await expect(page.locator("#player-volume")).toHaveValue("0.3");

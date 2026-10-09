@@ -10,6 +10,7 @@ use player_types::{
 use wasm_bindgen::JsCast;
 
 use crate::api::{self, errors_for};
+use crate::confirm::ConfirmModal;
 use crate::state::{Page, ctx};
 
 #[component]
@@ -29,13 +30,10 @@ pub fn Playlists() -> impl IntoView {
 
     load();
 
+    let deleting = RwSignal::new(None::<PlaylistListItem>);
+
     let delete = move |id: i64| {
-        if !window()
-            .confirm_with_message("Are you sure?")
-            .unwrap_or(false)
-        {
-            return;
-        }
+        deleting.set(None);
 
         spawn_local(async move {
             let _waiting = ctx.wait();
@@ -52,6 +50,7 @@ pub fn Playlists() -> impl IntoView {
 
     let row = move |playlist: PlaylistListItem| {
         let id = playlist.id;
+        let chosen = playlist.clone();
 
         view! {
             <tr class="align-middle" id=format!("playlist-{id}")>
@@ -83,7 +82,7 @@ pub fn Playlists() -> impl IntoView {
                             class="btn btn-sm btn-primary delete-playlist"
                             on:click=move |event: MouseEvent| {
                                 event.prevent_default();
-                                delete(id);
+                                deleting.set(Some(chosen.clone()));
                             }
                         >
                             "Delete"
@@ -121,6 +120,24 @@ pub fn Playlists() -> impl IntoView {
                     <tbody>{move || playlists.get().into_iter().map(row).collect_view()}</tbody>
                 </table>
             </Show>
+            {move || {
+                deleting
+                    .get()
+                    .map(|playlist| {
+                        let id = playlist.id;
+
+                        view! {
+                            <ConfirmModal
+                                title="Delete Playlist"
+                                confirm_label="Delete"
+                                on_confirm=Callback::new(move |()| delete(id))
+                                on_cancel=Callback::new(move |()| deleting.set(None))
+                            >
+                                <p class="mb-0">"Delete " <b>{playlist.name}</b> "? Its songs stay in the library."</p>
+                            </ConfirmModal>
+                        }
+                    })
+            }}
         </div>
     }
 }

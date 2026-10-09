@@ -5,11 +5,13 @@
 
 mod api;
 mod audio_graph;
+mod confirm;
 mod equalizer;
 mod layout;
 mod mp3s;
 mod player;
 mod playlists;
+mod settings;
 mod sources;
 mod state;
 mod storage;

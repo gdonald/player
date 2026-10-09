@@ -7,6 +7,7 @@ pub mod queue;
 pub mod reorder;
 pub mod search;
 pub mod selection;
+pub mod settings;
 pub mod sort;
 pub mod spectrum;
 pub mod theme;

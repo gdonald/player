@@ -2,6 +2,7 @@ use leptos::ev::{Event, KeyboardEvent, MouseEvent};
 use leptos::html;
 use leptos::prelude::*;
 use player_core::playback;
+use player_core::settings::VOLUME;
 use wasm_bindgen::JsCast;
 use wasm_bindgen::closure::Closure;
 use web_sys::{
@@ -9,11 +10,10 @@ use web_sys::{
 };
 
 use crate::audio_graph::Transport;
+use crate::settings;
 use crate::state::ctx;
-use crate::storage;
 use crate::theme::ThemePicker;
 
-const VOLUME_KEY: &str = "player.volume";
 /// The marquee box's left and right padding together, in pixels.
 const MARQUEE_PADDING: i32 = 12;
 /// How fast the title slides, in pixels per second.
@@ -22,14 +22,6 @@ const MARQUEE_SPEED: f64 = 20.0;
 const MARQUEE_MOVING_SHARE: f64 = 0.7;
 const POSITION_FRAME: std::time::Duration = std::time::Duration::from_millis(50);
 const NOTHING_PLAYING: &str = "Nothing playing";
-
-fn stored_volume() -> Option<String> {
-    storage::get(VOLUME_KEY)
-}
-
-fn store_volume(volume: f64) {
-    storage::set(VOLUME_KEY, &volume.to_string());
-}
 
 /// `navigator.mediaSession`, when the browser has it.
 fn media_session() -> Option<MediaSession> {
@@ -69,7 +61,7 @@ pub fn Player() -> impl IntoView {
     let transport = engine.transport;
     let duration = engine.duration;
     let position = RwSignal::new(0.0_f64);
-    let volume = RwSignal::new(playback::parse_volume(stored_volume().as_deref()));
+    let volume = RwSignal::new(playback::parse_volume(Some(&settings::get(ctx, VOLUME))));
     let muted = RwSignal::new(false);
 
     let has_track = move || ctx.current.with(Option::is_some);
@@ -326,7 +318,7 @@ pub fn Player() -> impl IntoView {
                             let level = range_value(&event).clamp(0.0, 1.0);
                             volume.set(level);
                             muted.set(false);
-                            store_volume(level);
+                            settings::set(ctx, VOLUME, level.to_string());
                         }
                     />
                 </div>

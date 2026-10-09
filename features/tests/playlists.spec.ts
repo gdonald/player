@@ -1,5 +1,16 @@
 import { expect, test } from "./fixtures";
-import { alert, createPlaylist, currentQueueRow, logIn, menu, queueTitles, resetData, transport, waitUntilPlaying } from "./helpers";
+import {
+  alert,
+  createPlaylist,
+  currentQueueRow,
+  logIn,
+  menu,
+  queueTitles,
+  resetData,
+  storedSetting,
+  transport,
+  waitUntilPlaying,
+} from "./helpers";
 
 let playlistId: number;
 
@@ -120,18 +131,25 @@ test("an album link in a playlist searches the library", async ({ page }) => {
   await expect(page.locator("#mp3s .play-mp3")).toHaveText(["Encore"]);
 });
 
-test("a playlist is deleted after confirming", async ({ page }) => {
-  page.once("dialog", (dialog) => dialog.accept());
+test("delete asks for confirmation naming the playlist", async ({ page }) => {
   await page.locator(`#playlist-${playlistId} .delete-playlist`).click();
+
+  await expect(page.locator("#confirm-modal")).toContainText("Delete Mix? Its songs stay in the library.");
+});
+
+test("a playlist is deleted after confirming", async ({ page }) => {
+  await page.locator(`#playlist-${playlistId} .delete-playlist`).click();
+  await page.click("#confirm-accept");
 
   await expect(alert(page)).toContainText("Playlist deleted");
   await expect(page.locator(`#playlist-${playlistId}`)).toHaveCount(0);
 });
 
-test("dismissing the confirmation keeps the playlist", async ({ page }) => {
-  page.once("dialog", (dialog) => dialog.dismiss());
+test("cancelling the confirmation keeps the playlist", async ({ page }) => {
   await page.locator(`#playlist-${playlistId} .delete-playlist`).click();
+  await page.click("#confirm-cancel");
 
+  await expect(page.locator("#confirm-modal")).toHaveCount(0);
   await expect(page.locator(`#playlist-${playlistId}`)).toHaveCount(1);
 });
 
@@ -167,7 +185,7 @@ test("next right after enqueueing a playlist plays the following song", async ({
 test("next after a reload plays the following song", async ({ page }) => {
   await page.locator(`#playlist-${playlistId} .enqueue-playlist`).click();
   await waitUntilPlaying(page);
-  await page.waitForFunction(() => /^\d+;/.test(window.localStorage.getItem("player.resume") ?? ""));
+  await expect.poll(() => storedSetting("resume")).toMatch(/^\d+;/);
   await page.reload();
   await expect.poll(() => transport(page)).toBe("paused");
 
@@ -233,9 +251,9 @@ test("a drag started without drag data still moves the entry", async ({ page }) 
 test("deleting a playlist lowers the Playlists count", async ({ page }) => {
   const playlistsCount = menu(page, "Playlists").locator(".library-count");
   await expect(playlistsCount).toHaveText("2");
-  page.once("dialog", (dialog) => dialog.accept());
 
   await page.locator(`#playlist-${playlistId} .delete-playlist`).click();
+  await page.click("#confirm-accept");
 
   await expect(alert(page)).toContainText("Playlist deleted");
   await expect(playlistsCount).toHaveText("1");

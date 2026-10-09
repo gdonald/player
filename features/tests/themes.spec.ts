@@ -1,6 +1,6 @@
 import { Page } from "@playwright/test";
 import { expect, test } from "./fixtures";
-import { logIn, resetData } from "./helpers";
+import { logIn, resetData, storedSetting, storeSetting } from "./helpers";
 
 const DEFAULT_TITLE_COLOR = "rgb(217, 199, 108)";
 const CHARCOAL_TITLE_COLOR = "rgb(211, 212, 215)";
@@ -112,6 +112,7 @@ test("the sapphire theme shows white display text and a blue playlist", async ({
 test("the chosen theme is kept across a reload", async ({ page }) => {
   await page.selectOption("#theme-select", "charcoal");
   await expect.poll(() => titleColor(page)).toBe(CHARCOAL_TITLE_COLOR);
+  await expect.poll(() => storedSetting("theme")).toBe("charcoal");
 
   await page.reload();
 
@@ -120,7 +121,7 @@ test("the chosen theme is kept across a reload", async ({ page }) => {
 });
 
 test("an unknown stored theme falls back to the default", async ({ page }) => {
-  await page.evaluate(() => localStorage.setItem("player.theme", "solarized"));
+  await storeSetting("theme", "solarized");
 
   await page.reload();
 

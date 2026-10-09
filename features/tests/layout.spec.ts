@@ -1,6 +1,6 @@
 import { Page } from "@playwright/test";
 import { expect, test } from "./fixtures";
-import { logIn, resetData } from "./helpers";
+import { logIn, resetData, storedSetting } from "./helpers";
 
 test.beforeEach(async ({ page, request }) => {
   await resetData(request);
@@ -68,6 +68,7 @@ test("the PL button hides and shows the playlist, and the choice is kept", async
   await page.click("#playlist-toggle");
   await expect(page.locator(".playlist-list")).toHaveCount(0);
   await expect(page.locator("#playlist-toggle")).toHaveAttribute("aria-expanded", "false");
+  await expect.poll(() => storedSetting("playlist_open")).toBe("false");
 
   await page.reload();
   await expect(page.locator(".library-nav")).toBeVisible();

@@ -243,6 +243,22 @@ impl Wrapped for SourceParams {
 }
 
 #[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
+pub struct SettingParams {
+    #[serde(default)]
+    pub value: Option<String>,
+}
+
+impl Wrapped for SettingParams {
+    const KEY: &'static str = "setting";
+}
+
+/// The signed-in user's settings by name.
+#[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
+pub struct SettingsResponse {
+    pub settings: BTreeMap<String, String>,
+}
+
+#[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
 pub struct SessionParams {
     #[serde(default)]
     pub username: String,

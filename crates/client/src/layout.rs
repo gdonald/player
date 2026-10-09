@@ -1,6 +1,7 @@
 use leptos::ev::{MouseEvent, SubmitEvent};
 use leptos::prelude::*;
 use leptos::task::spawn_local;
+use player_core::settings::PLAYLIST_OPEN;
 use player_core::{playback, queue, title};
 use player_types::CountsResponse;
 
@@ -9,22 +10,21 @@ use crate::equalizer::Equalizer;
 use crate::mp3s::{Mp3Edit, Mp3s};
 use crate::player::Player;
 use crate::playlists::{PlaylistEdit, Playlists};
+use crate::settings;
 use crate::sources::{SourceEdit, Sources};
 use crate::state::{Ctx, Page, ctx};
-use crate::storage;
 use crate::theme;
 
-const PLAYLIST_OPEN_KEY: &str = "player.playlist.open";
 use crate::visualizer::Visualizer;
 
 #[component]
 pub fn App() -> impl IntoView {
     let ctx = Ctx::new();
     provide_context(ctx);
-    ctx.remember_query();
     ctx.engine.run();
+    settings::save_on_change(ctx);
     ctx.follow_engine();
-    theme::apply_stored();
+    theme::apply_cached();
 
     spawn_local(async move {
         ctx.authenticated.set(Some(api::active().await));
@@ -32,7 +32,7 @@ pub fn App() -> impl IntoView {
 
     Effect::new(move |_| {
         if ctx.authenticated.get() == Some(true) {
-            ctx.load_queue();
+            settings::load(ctx);
         }
     });
 
@@ -50,9 +50,9 @@ pub fn App() -> impl IntoView {
     view! {
         <div id="root" class="vh-100">
             {move || match ctx.authenticated.get() {
-                None => ().into_any(),
                 Some(false) => view! { <LoginForm /> }.into_any(),
-                Some(true) => view! { <Layout /> }.into_any(),
+                Some(true) if ctx.synced.loaded.get() => view! { <Layout /> }.into_any(),
+                _ => ().into_any(),
             }}
         </div>
     }
@@ -296,9 +296,8 @@ fn Wait() -> impl IntoView {
 #[component]
 fn Queue() -> impl IntoView {
     let ctx = ctx();
-    let open =
-        RwSignal::new(storage::get(PLAYLIST_OPEN_KEY).is_none_or(|stored| stored != "false"));
-    Effect::new(move |_| storage::set(PLAYLIST_OPEN_KEY, &open.get().to_string()));
+    let open = RwSignal::new(settings::get(ctx, PLAYLIST_OPEN) != "false");
+    Effect::new(move |_| settings::set(ctx, PLAYLIST_OPEN, open.get().to_string()));
 
     let current_id = move || {
         ctx.current

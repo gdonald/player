@@ -1,5 +1,5 @@
 import { expect, test } from "./fixtures";
-import { LIBRARY_ORDER, alert, logIn, mp3Row, mp3Titles, resetData, sql } from "./helpers";
+import { alert, LIBRARY_ORDER, logIn, mp3Row, mp3Titles, resetData, sql, storedSetting } from "./helpers";
 
 test.beforeEach(async ({ page, request }) => {
   await resetData(request);
@@ -199,6 +199,7 @@ test("the edit breadcrumb returns to the list", async ({ page }) => {
 test("the search is kept across a reload", async ({ page }) => {
   await page.fill("#search", "encore");
   await expect.poll(() => mp3Titles(page)).toEqual(["Encore"]);
+  await expect.poll(() => storedSetting("search")).toBe("encore");
 
   await page.reload();
 
@@ -211,6 +212,7 @@ test("clear search forgets the kept search", async ({ page }) => {
   await expect.poll(() => mp3Titles(page)).toEqual(["Encore"]);
   await page.click("#button-addon-search");
   await expect.poll(() => mp3Titles(page)).toEqual(LIBRARY_ORDER);
+  await expect.poll(() => storedSetting("search")).toBe("");
 
   await page.reload();
 
@@ -221,6 +223,7 @@ test("clear search forgets the kept search", async ({ page }) => {
 test("an artist link search is kept across a reload", async ({ page }) => {
   await mp3Row(page, "Opening Song").locator(".search-artist").click();
   await expect.poll(() => mp3Titles(page)).toEqual(["Opening Song", "Second Song"]);
+  await expect.poll(() => storedSetting("search")).toBe('artist:"The Testers"');
 
   await page.reload();
 

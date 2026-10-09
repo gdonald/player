@@ -1,6 +1,6 @@
 import { Page } from "@playwright/test";
 import { expect, test } from "./fixtures";
-import { logIn, mp3Row, queueTitles, resetData, serveTone } from "./helpers";
+import { logIn, mp3Row, queueTitles, resetData, serveTone, storedSetting } from "./helpers";
 
 test.beforeEach(async ({ page, request }) => {
   await resetData(request);
@@ -95,6 +95,7 @@ test("the VIS button hides and shows the analyzer, and the choice is kept", asyn
 
   await expect(page.locator("#visualizer")).toHaveCount(0);
   await expect(page.locator("#visualizer-toggle")).toHaveAttribute("aria-expanded", "false");
+  await expect.poll(() => storedSetting("visualizer_open")).toBe("false");
 
   await page.reload();
   await expect(page.locator(".library-nav")).toBeVisible();

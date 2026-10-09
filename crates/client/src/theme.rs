@@ -1,13 +1,14 @@
 use leptos::prelude::*;
 use player_core::theme::{self, THEMES, Theme};
 
-use crate::storage;
+use player_core::settings::THEME;
 
-const THEME_KEY: &str = "player.theme";
+use crate::state::ctx;
+use crate::{settings, storage};
 
-fn stored() -> Theme {
-    theme::find(storage::get(THEME_KEY).as_deref())
-}
+/// The theme is also cached in the browser, where index.html reads it before
+/// the app loads, so a reload does not flash the default theme.
+pub const BROWSER_KEY: &str = "player.theme";
 
 /// Points the theme stylesheet link in index.html at the theme's file.
 fn apply(chosen: Theme) {
@@ -18,20 +19,27 @@ fn apply(chosen: Theme) {
         .ok();
 }
 
-/// Puts the stored theme in place, which also replaces a stored name that is
-/// not a known theme with the default.
-pub fn apply_stored() {
-    apply(stored());
+/// Puts the cached theme in place until the settings load.
+pub fn apply_cached() {
+    apply(theme::find(storage::get(BROWSER_KEY).as_deref()));
+}
+
+/// Puts the saved theme in place and caches it for the next page load.
+pub fn apply_saved(name: &str) {
+    let chosen = theme::find(Some(name));
+    storage::set(BROWSER_KEY, chosen.name);
+    apply(chosen);
 }
 
 #[component]
 pub fn ThemePicker() -> impl IntoView {
-    let current = RwSignal::new(stored());
+    let ctx = ctx();
+    let current = RwSignal::new(theme::find(Some(&settings::get(ctx, THEME))));
 
     let choose = move |event| {
         let chosen = theme::find(Some(&event_target_value(&event)));
-        storage::set(THEME_KEY, chosen.name);
-        apply(chosen);
+        settings::set(ctx, THEME, chosen.name.to_string());
+        apply_saved(chosen.name);
         current.set(chosen);
     };
 

@@ -12,6 +12,7 @@ pub mod queue;
 pub mod routes;
 pub mod scanner;
 pub mod seeds;
+pub mod settings;
 pub mod source_state;
 pub mod sources;
 pub mod tags;

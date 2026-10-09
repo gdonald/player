@@ -1,6 +1,6 @@
 import { Page } from "@playwright/test";
 import { expect, test } from "./fixtures";
-import { logIn, mp3Row, position, queueTitles, resetData, transport } from "./helpers";
+import { logIn, mp3Row, position, queueTitles, resetData, storedSetting, transport } from "./helpers";
 
 test.beforeEach(async ({ request }) => {
   await resetData(request);
@@ -156,7 +156,8 @@ test("the app works when the browser blocks storage", async ({ page }) => {
 
   await page.selectOption("#theme-select", "charcoal");
   await expect(page.locator("link#theme")).toHaveAttribute("href", "/themes/theme-charcoal.css");
+  await expect.poll(() => storedSetting("theme")).toBe("charcoal");
 
   await page.reload();
-  await expect(page.locator("link#theme")).toHaveAttribute("href", "/themes/theme-default.css");
+  await expect(page.locator("link#theme")).toHaveAttribute("href", "/themes/theme-charcoal.css");
 });

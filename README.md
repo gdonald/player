@@ -32,15 +32,15 @@ For a single process, build the client with `trunk build` in `crates/client` and
 
 ## Themes
 
-Pick a theme from the menu at the right of the player's title bar, next to the logout button. The choice is kept in the browser.
+Pick a theme from the menu at the right of the player's title bar, next to the logout button. The choice is saved to your account with your other player settings.
 
-![MP3 Player](https://raw.githubusercontent.com/gdonald/player/main/ss1.png "MP3 Player")
+![MP3 Player](https://raw.githubusercontent.com/gdonald/player/main/screenshots/ss1.png "MP3 Player")
 
-![MP3 Player](https://raw.githubusercontent.com/gdonald/player/main/ss2.png "MP3 Player")
+![MP3 Player](https://raw.githubusercontent.com/gdonald/player/main/screenshots/ss2.png "MP3 Player")
 
-![MP3 Player](https://raw.githubusercontent.com/gdonald/player/main/ss3.png "MP3 Player")
+![MP3 Player](https://raw.githubusercontent.com/gdonald/player/main/screenshots/ss3.png "MP3 Player")
 
-![MP3 Player](https://raw.githubusercontent.com/gdonald/player/main/ss4.png "MP3 Player")
+![MP3 Player](https://raw.githubusercontent.com/gdonald/player/main/screenshots/ss4.png "MP3 Player")
 
 Each theme is one stylesheet in `crates/client/themes/`. To add one, copy `theme-default.css` to `theme-<name>.css`, edit it, and add its name and label to `THEMES` in `crates/core/src/theme.rs`.
 

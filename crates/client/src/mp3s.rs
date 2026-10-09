@@ -2,6 +2,7 @@ use gloo_timers::future::TimeoutFuture;
 use leptos::ev::MouseEvent;
 use leptos::prelude::*;
 use leptos::task::spawn_local;
+use player_core::settings::LIST_MODE;
 use player_core::views::ListMode;
 use player_core::{names, paths, selection, sort};
 use player_types::{
@@ -12,11 +13,10 @@ use player_types::{
 use serde_json::Value;
 
 use crate::api::{self, errors_for};
+use crate::settings;
 use crate::state::{Ctx, Page, ctx};
-use crate::storage;
 
 const SEARCH_DEBOUNCE_MILLISECONDS: u32 = 500;
-const MODE_KEY: &str = "player.mp3s.mode";
 
 fn attributes(mp3_ids: &[i64]) -> Vec<PlaylistMp3Attributes> {
     mp3_ids
@@ -57,7 +57,7 @@ pub fn Mp3s() -> impl IntoView {
     let mp3s = RwSignal::new(Vec::<Mp3>::new());
     let albums = RwSignal::new(Vec::<AlbumListItem>::new());
     let artists = RwSignal::new(Vec::<ArtistListItem>::new());
-    let mode = RwSignal::new(ListMode::parse(storage::get(MODE_KEY).as_deref()));
+    let mode = RwSignal::new(ListMode::parse(Some(&settings::get(ctx, LIST_MODE))));
     let playlists = RwSignal::new(Vec::<PlaylistListItem>::new());
     let sort_by = RwSignal::new(None::<String>);
     let album_sort = RwSignal::new(None::<String>);
@@ -67,7 +67,7 @@ pub fn Mp3s() -> impl IntoView {
     let search_text = RwSignal::new(ctx.query.get_untracked().unwrap_or_default());
     let typing = StoredValue::new(0_u64);
 
-    Effect::new(move |_| storage::set(MODE_KEY, mode.get().name()));
+    Effect::new(move |_| settings::set(ctx, LIST_MODE, mode.get().name().to_string()));
 
     let load = move || {
         let query = ctx.query.get_untracked();

@@ -2,25 +2,25 @@ use std::time::Duration;
 
 use leptos::html;
 use leptos::prelude::*;
+use player_core::settings::VISUALIZER_OPEN;
 use player_core::spectrum::{self, BAR_COUNT};
 use wasm_bindgen::JsCast;
 use web_sys::CanvasRenderingContext2d;
 
+use crate::settings;
 use crate::state::ctx;
-use crate::storage;
 
-const OPEN_KEY: &str = "player.visualizer.open";
 const FRAME: Duration = Duration::from_millis(33);
 const GAP: f64 = 2.0;
 const PEAK_HEIGHT: f64 = 2.0;
 
 /// Shown unless it was hidden before.
 fn stored_open() -> bool {
-    storage::get(OPEN_KEY).is_none_or(|stored| stored != "false")
+    settings::get(ctx(), VISUALIZER_OPEN) != "false"
 }
 
 fn store_open(open: bool) {
-    storage::set(OPEN_KEY, &open.to_string());
+    settings::set(ctx(), VISUALIZER_OPEN, open.to_string());
 }
 
 /// The analyzer colors, read from the theme's `--vis-*` custom properties.

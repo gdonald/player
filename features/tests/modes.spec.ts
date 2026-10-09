@@ -1,6 +1,6 @@
 import { Page } from "@playwright/test";
 import { expect, test } from "./fixtures";
-import { currentQueueRow, endTrack, logIn, mp3Row, position, queueTitles, resetData, songLength } from "./helpers";
+import { currentQueueRow, endTrack, logIn, mp3Row, position, queueTitles, resetData, songLength, storedSetting } from "./helpers";
 
 test.beforeEach(async ({ page, request }) => {
   await resetData(request);
@@ -42,6 +42,7 @@ test("the mode buttons show icons only", async ({ page }) => {
 
 test("the mode is kept across a reload", async ({ page }) => {
   await modeButton(page, "loop-all").click();
+  await expect.poll(() => storedSetting("loop_mode")).toBe("loop-all");
 
   await page.reload();
 

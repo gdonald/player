@@ -3,13 +3,13 @@ use axum::http::StatusCode;
 use axum::middleware::{self, Next};
 use axum::response::{IntoResponse, Response};
 use axum::routing::{get, post};
-use axum::{Json, Router};
+use axum::{Extension, Json, Router};
 use player_core::{search, sort};
 use player_types::{
     AlbumsResponse, ArtistsResponse, CountsResponse, MessageResponse, Mp3Params, Mp3Response,
     Mp3sResponse, PlaylistMp3MoveParams, PlaylistMp3sResponse, PlaylistParams, PlaylistResponse,
-    PlaylistsResponse, QueuedMp3Params, QueuedMp3sResponse, SessionParams, SourceParams,
-    SourceResponse, SourcesResponse,
+    PlaylistsResponse, QueuedMp3Params, QueuedMp3sResponse, SessionParams, SettingParams,
+    SettingsResponse, SourceParams, SourceResponse, SourcesResponse,
 };
 use serde::Deserialize;
 use serde_json::{Value, json};
@@ -21,9 +21,13 @@ use crate::app::AppState;
 use crate::error::{AppError, AppResult};
 use crate::params::Params;
 use crate::playlists::Collection;
-use crate::{library, mp3s, playlist_mp3s, playlists, queue, sources, users};
+use crate::{library, mp3s, playlist_mp3s, playlists, queue, settings, sources, users};
 
 pub const USER_ID: &str = "user_id";
+
+/// The signed-in user, set on each request that passed `require_user`.
+#[derive(Debug, Clone, Copy)]
+struct CurrentUser(i64);
 
 pub fn api(state: AppState) -> Router<AppState> {
     let protected = Router::new()
@@ -81,6 +85,8 @@ pub fn api(state: AppState) -> Router<AppState> {
                 .delete(sources_destroy),
         )
         .route("/sources/{id}/scan", get(sources_scan))
+        .route("/settings", get(settings_index))
+        .route("/settings/{name}", axum::routing::put(settings_update))
         .route_layer(middleware::from_fn_with_state(state, require_user));
 
     Router::new()
@@ -97,7 +103,7 @@ async fn not_found() -> AppError {
 async fn require_user(
     State(state): State<AppState>,
     session: Session,
-    request: Request,
+    mut request: Request,
     next: Next,
 ) -> AppResult<Response> {
     let user_id: Option<i64> = session.get(USER_ID).await.map_err(anyhow::Error::from)?;
@@ -109,6 +115,8 @@ async fn require_user(
     if !users::exists(&state.pool, user_id).await? {
         return Err(AppError::Unauthorized);
     }
+
+    request.extensions_mut().insert(CurrentUser(user_id));
 
     Ok(next.run(request).await)
 }
@@ -472,6 +480,27 @@ async fn sources_destroy(
     Ok(Json(MessageResponse {
         message: "Source removed".to_string(),
     }))
+}
+
+async fn settings_index(
+    State(state): State<AppState>,
+    Extension(CurrentUser(user_id)): Extension<CurrentUser>,
+) -> AppResult<Json<SettingsResponse>> {
+    let settings = settings::list(&state.pool, user_id).await?;
+
+    Ok(Json(SettingsResponse { settings }))
+}
+
+async fn settings_update(
+    State(state): State<AppState>,
+    Extension(CurrentUser(user_id)): Extension<CurrentUser>,
+    Path(name): Path<String>,
+    Params(params): Params<SettingParams>,
+) -> AppResult<Json<SettingsResponse>> {
+    let value = params.value.unwrap_or_default();
+    settings::put(&state.pool, user_id, &name, &value).await?;
+
+    settings_index(State(state), Extension(CurrentUser(user_id))).await
 }
 
 async fn sources_scan(State(state): State<AppState>, Path(id): Path<i64>) -> AppResult<StatusCode> {

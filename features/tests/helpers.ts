@@ -41,7 +41,7 @@ export async function resetData(request: APIRequestContext) {
   });
 
   await sql(
-    "TRUNCATE queued_mp3s, playlist_mp3s, playlists, mp3s, albums, artists, sources RESTART IDENTITY CASCADE",
+    "TRUNCATE queued_mp3s, playlist_mp3s, playlists, mp3s, albums, artists, sources, user_settings RESTART IDENTITY CASCADE",
   );
   await sql("INSERT INTO sources (path) VALUES ($1)", [LIBRARY]);
   await sql("INSERT INTO playlists (name) VALUES ('Recently Played')");
@@ -163,4 +163,19 @@ export async function serveTone(page: Page, seconds = 5) {
   await page.route(/\/api\/mp3s\/\d+\/play$/, (route) =>
     route.fulfill({ status: 200, contentType: "audio/wav", body: wav }),
   );
+}
+
+/// Stores a setting for the test user as the server would hold it.
+export async function storeSetting(name: string, value: string) {
+  await sql(
+    "INSERT INTO user_settings (user_id, name, value) SELECT id, $1, $2 FROM users WHERE username = $3 " +
+      "ON CONFLICT (user_id, name) DO UPDATE SET value = EXCLUDED.value",
+    [name, value, USERNAME],
+  );
+}
+
+/// The signed-in test user's stored setting, or null when none is stored.
+export async function storedSetting(name: string) {
+  const rows = await sql<{ value: string }>("SELECT value FROM user_settings WHERE name = $1", [name]);
+  return rows[0]?.value ?? null;
 }

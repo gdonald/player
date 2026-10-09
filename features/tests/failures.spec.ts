@@ -140,9 +140,9 @@ test("a failed playlist delete shows the error", async ({ page, request }) => {
   await failRequests(page, "DELETE", /^\/api\/playlists\/\d+$/);
   await logIn(page);
   await menu(page, "Playlists").click();
-  page.once("dialog", (dialog) => dialog.accept());
 
   await page.locator(`#playlist-${playlistId} .delete-playlist`).click();
+  await page.click("#confirm-accept");
 
   await expect(alert(page)).toContainText("Request failed (500)");
 });
@@ -235,8 +235,26 @@ test("a failed source removal shows the error and keeps the source", async ({ pa
   await menu(page, "Sources").click();
 
   await page.locator("#source-1 .remove-source").click();
-  await page.click("#confirm-remove-source");
+  await page.click("#confirm-accept");
 
   await expect(alert(page)).toContainText("Request failed (500)");
   await expect(page.locator("#source-1")).toBeVisible();
+});
+
+test("a failed settings load shows the error", async ({ page }) => {
+  await failRequests(page, "GET", /^\/api\/settings$/);
+
+  await logIn(page);
+
+  await expect(alert(page)).toContainText("Request failed (500)");
+});
+
+test("a failed settings save shows the error", async ({ page }) => {
+  await failRequests(page, "PUT", /^\/api\/settings\/equalizer$/);
+  await logIn(page);
+
+  await page.click("#equalizer-toggle");
+  await page.click("#equalizer-on");
+
+  await expect(alert(page)).toContainText("Request failed (500)");
 });

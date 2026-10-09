@@ -1,19 +1,18 @@
 use leptos::prelude::*;
 use leptos::task::spawn_local;
+use player_core::equalizer::SavedPreset;
 use player_core::playback;
 use player_core::queue;
+use player_core::settings::RESUME;
 use player_types::{CountsResponse, FlexId, QueuedMp3, QueuedMp3Params, QueuedMp3sResponse, wrap};
 use serde_json::json;
 
 use crate::api::{self, ApiError};
 use crate::audio_graph::{Engine, Plan, Transport};
-use crate::storage;
+use crate::settings::{self, Synced};
 
 const AUDIO_UNAVAILABLE: &str = "This browser cannot play audio.";
 
-const QUERY_KEY: &str = "player.query";
-const MODE_KEY: &str = "player.mode";
-const RESUME_KEY: &str = "player.resume";
 const RESUME_SAVE_INTERVAL: std::time::Duration = std::time::Duration::from_secs(1);
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -41,6 +40,9 @@ pub struct Ctx {
     pub mode: RwSignal<queue::Mode>,
     /// The library counts on the menu buttons.
     pub counts: RwSignal<Option<CountsResponse>>,
+    /// The equalizer presets the user saved.
+    pub presets: RwSignal<Vec<SavedPreset>>,
+    pub synced: Synced,
     /// Whether the first queue load restored the saved playback.
     restored: StoredValue<bool>,
 }
@@ -63,32 +65,23 @@ impl Ctx {
         Ctx {
             authenticated: RwSignal::new(None),
             page: RwSignal::new(Page::Mp3s),
-            query: RwSignal::new(storage::get(QUERY_KEY).filter(|query| !query.is_empty())),
+            query: RwSignal::new(None),
             message: RwSignal::new(String::new()),
             waiting: RwSignal::new(0),
             queue: RwSignal::new(Vec::new()),
             current: RwSignal::new(None),
             engine: Engine::new(),
-            mode: RwSignal::new(queue::Mode::parse(storage::get(MODE_KEY).as_deref())),
+            mode: RwSignal::new(queue::Mode::Play),
             counts: RwSignal::new(None),
+            presets: RwSignal::new(Vec::new()),
+            synced: Synced::new(),
             restored: StoredValue::new(false),
         }
     }
 
-    /// Keeps the MP3s search and the play mode across reloads.
-    pub fn remember_query(&self) {
-        let query = self.query;
-        Effect::new(move |_| {
-            storage::set(QUERY_KEY, query.get().as_deref().unwrap_or_default());
-        });
-
-        let mode = self.mode;
-        Effect::new(move |_| storage::set(MODE_KEY, mode.get().as_str()));
-    }
-
     fn save_playback(&self) {
         let saved = playback::serialize_resume(self.current_id(), self.engine.position());
-        storage::set(RESUME_KEY, &saved);
+        settings::set(*self, RESUME, saved);
     }
 
     /// On the first queue load, cues the saved entry paused at the saved
@@ -101,7 +94,7 @@ impl Ctx {
         }
         self.restored.set_value(true);
 
-        let saved = playback::parse_resume(storage::get(RESUME_KEY).as_deref());
+        let saved = playback::parse_resume(Some(&settings::get(*self, RESUME)));
         let entry = saved.and_then(|saved| {
             self.entry(saved.entry_id)
                 .map(|entry| (entry, saved.position))
