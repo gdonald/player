@@ -1,5 +1,18 @@
 import { expect, test } from "./fixtures";
-import { LIBRARY, alert, logIn, menu, resetData, sql } from "./helpers";
+import { Page } from "@playwright/test";
+import {
+  LIBRARY,
+  alert,
+  logIn,
+  menu,
+  mp3Row,
+  queueTitles,
+  resetData,
+  serveTone,
+  sql,
+  transport,
+  waitUntilPlaying,
+} from "./helpers";
 
 test.beforeEach(async ({ page, request }) => {
   await resetData(request);
@@ -93,4 +106,72 @@ test("adding a source raises the Sources count", async ({ page }) => {
 
   await expect(alert(page)).toContainText("Source created");
   await expect(sourcesCount).toHaveText("2");
+});
+
+const removeModal = (page: Page) => page.locator("#remove-source-modal");
+
+async function playFromLibrary(page: Page, title: string) {
+  await serveTone(page);
+  await menu(page, "MP3s").click();
+  await mp3Row(page, title).locator(".play-mp3").click();
+  await waitUntilPlaying(page);
+  await menu(page, "Sources").click();
+}
+
+test("remove asks for confirmation before removing the source", async ({ page }) => {
+  await page.locator("#source-1 .remove-source").click();
+
+  await expect(removeModal(page)).toContainText(`Remove ${LIBRARY} from the library?`);
+  await expect(removeModal(page)).toContainText("Its 4 MP3s will be removed");
+});
+
+test("cancelling the confirmation keeps the source", async ({ page }) => {
+  await page.locator("#source-1 .remove-source").click();
+  await page.click("#cancel-remove-source");
+
+  await expect(removeModal(page)).toHaveCount(0);
+  await expect(page.locator("#source-1")).toBeVisible();
+});
+
+test("closing the confirmation keeps the source", async ({ page }) => {
+  await page.locator("#source-1 .remove-source").click();
+  await removeModal(page).locator(".btn-close").click();
+
+  await expect(removeModal(page)).toHaveCount(0);
+  await expect(page.locator("#source-1")).toBeVisible();
+});
+
+test("a confirmed removal deletes the source and its songs", async ({ page }) => {
+  await page.locator("#source-1 .remove-source").click();
+  await page.click("#confirm-remove-source");
+
+  await expect(alert(page)).toContainText("Source removed");
+  await expect(page.getByText("No sources found.")).toBeVisible();
+  await expect(menu(page, "Sources").locator(".library-count")).toHaveText("0");
+  await expect(menu(page, "MP3s").locator(".library-count")).toHaveText("0");
+});
+
+test("removing the source of the playing song stops playback and empties the queue", async ({ page }) => {
+  await playFromLibrary(page, "Encore");
+
+  await page.locator("#source-1 .remove-source").click();
+  await page.click("#confirm-remove-source");
+
+  await expect(alert(page)).toContainText("Source removed");
+  await expect.poll(() => queueTitles(page)).toEqual([]);
+  await expect.poll(() => transport(page)).toBe("stopped");
+});
+
+test("removing another source keeps the playing song", async ({ page }) => {
+  await sql("INSERT INTO sources (path) VALUES ('/zz/music')");
+  await playFromLibrary(page, "Encore");
+  const otherId = (await sql<{ id: string }>("SELECT id FROM sources WHERE path = '/zz/music'"))[0].id;
+
+  await page.locator(`#source-${otherId} .remove-source`).click();
+  await page.click("#confirm-remove-source");
+
+  await expect(alert(page)).toContainText("Source removed");
+  await expect(page.locator(`#source-${otherId}`)).toHaveCount(0);
+  await expect.poll(() => queueTitles(page)).toEqual(["Encore"]);
+  await expect.poll(() => transport(page)).toBe("playing");
 });

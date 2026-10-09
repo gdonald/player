@@ -3,6 +3,7 @@ use sqlx::PgPool;
 
 use crate::db::is_unique_violation;
 use crate::error::{AppError, AppResult, Validation};
+use crate::queue;
 use crate::source_state::{SourceEvent, SourceState};
 
 const CREATE_FAILED: &str = "Failed to create source";
@@ -78,6 +79,73 @@ pub async fn update(pool: &PgPool, id: i64, params: &SourceParams) -> AppResult<
         .map_err(|error| path_taken(error, UPDATE_FAILED))?;
 
     Ok(SourceSummary { id, path })
+}
+
+/// Deletes the source with its mp3s, the queue and playlist entries for them,
+/// and the artists and albums left with no mp3s.
+pub async fn delete(pool: &PgPool, id: i64) -> AppResult<()> {
+    let mut transaction = pool.begin().await?;
+    queue::lock(&mut transaction).await?;
+
+    let album_ids: Vec<i64> =
+        sqlx::query_scalar("SELECT DISTINCT album_id FROM mp3s WHERE source_id = $1")
+            .bind(id)
+            .fetch_all(&mut *transaction)
+            .await?;
+    let artist_ids: Vec<i64> =
+        sqlx::query_scalar("SELECT DISTINCT artist_id FROM mp3s WHERE source_id = $1")
+            .bind(id)
+            .fetch_all(&mut *transaction)
+            .await?;
+
+    let deleted = sqlx::query("DELETE FROM sources WHERE id = $1")
+        .bind(id)
+        .execute(&mut *transaction)
+        .await?;
+
+    if deleted.rows_affected() == 0 {
+        return Err(AppError::NotFound);
+    }
+
+    sqlx::query(
+        "UPDATE queued_mp3s q SET position = ordered.position::int \
+         FROM (SELECT id, ROW_NUMBER() OVER (ORDER BY position, id) AS position \
+               FROM queued_mp3s) ordered \
+         WHERE q.id = ordered.id AND q.position <> ordered.position",
+    )
+    .execute(&mut *transaction)
+    .await?;
+
+    sqlx::query(
+        "UPDATE playlist_mp3s pm SET position = ordered.position::int \
+         FROM (SELECT id, ROW_NUMBER() OVER (PARTITION BY playlist_id ORDER BY position, id) \
+                   AS position \
+               FROM playlist_mp3s) ordered \
+         WHERE pm.id = ordered.id AND pm.position <> ordered.position",
+    )
+    .execute(&mut *transaction)
+    .await?;
+
+    sqlx::query(
+        "DELETE FROM albums al WHERE al.id = ANY($1) \
+         AND NOT EXISTS (SELECT 1 FROM mp3s m WHERE m.album_id = al.id)",
+    )
+    .bind(&album_ids)
+    .execute(&mut *transaction)
+    .await?;
+
+    sqlx::query(
+        "DELETE FROM artists ar WHERE ar.id = ANY($1) \
+         AND NOT EXISTS (SELECT 1 FROM mp3s m WHERE m.artist_id = ar.id) \
+         AND NOT EXISTS (SELECT 1 FROM albums al WHERE al.artist_id = ar.id)",
+    )
+    .bind(&artist_ids)
+    .execute(&mut *transaction)
+    .await?;
+
+    transaction.commit().await?;
+
+    Ok(())
 }
 
 pub async fn state(pool: &PgPool, id: i64) -> sqlx::Result<Option<SourceState>> {

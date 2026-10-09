@@ -2,7 +2,8 @@ use leptos::ev::{MouseEvent, SubmitEvent};
 use leptos::prelude::*;
 use leptos::task::spawn_local;
 use player_types::{
-    FieldErrors, SourceListItem, SourceParams, SourceResponse, SourceSummary, SourcesResponse, wrap,
+    FieldErrors, MessageResponse, SourceListItem, SourceParams, SourceResponse, SourceSummary,
+    SourcesResponse, wrap,
 };
 
 use crate::api::{self, errors_for};
@@ -38,8 +39,28 @@ pub fn Sources() -> impl IntoView {
         });
     };
 
+    let removing = RwSignal::new(None::<SourceListItem>);
+
+    let remove = move |id: i64| {
+        removing.set(None);
+
+        spawn_local(async move {
+            let _waiting = ctx.wait();
+            match api::delete::<MessageResponse>(&format!("/api/sources/{id}")).await {
+                Ok(body) => {
+                    ctx.message.set(body.message);
+                    ctx.load_counts();
+                    ctx.reload_queue();
+                    load();
+                }
+                Err(error) => ctx.fail(&error),
+            }
+        });
+    };
+
     let row = move |source: SourceListItem| {
         let id = source.id;
+        let chosen = source.clone();
 
         view! {
             <tr class="align-middle" id=format!("source-{id}")>
@@ -64,6 +85,15 @@ pub fn Sources() -> impl IntoView {
                             }
                         >
                             "Scan"
+                        </button>
+                        <button
+                            class="btn btn-sm btn-danger remove-source"
+                            on:click=move |event: MouseEvent| {
+                                event.prevent_default();
+                                removing.set(Some(chosen.clone()));
+                            }
+                        >
+                            "Remove"
                         </button>
                     </div>
                 </td>
@@ -99,7 +129,82 @@ pub fn Sources() -> impl IntoView {
                     <tbody>{move || sources.get().into_iter().map(row).collect_view()}</tbody>
                 </table>
             </Show>
+            {move || {
+                removing
+                    .get()
+                    .map(|source| {
+                        view! {
+                            <RemoveSourceModal
+                                source
+                                on_confirm=Callback::new(remove)
+                                on_cancel=Callback::new(move |()| removing.set(None))
+                            />
+                        }
+                    })
+            }}
         </div>
+    }
+}
+
+#[component]
+fn RemoveSourceModal(
+    source: SourceListItem,
+    on_confirm: Callback<i64>,
+    on_cancel: Callback<()>,
+) -> impl IntoView {
+    let id = source.id;
+
+    view! {
+        <div
+            class="modal d-block"
+            id="remove-source-modal"
+            tabindex="-1"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="remove-source-title"
+        >
+            <div class="modal-dialog modal-dialog-centered">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title" id="remove-source-title">
+                            "Remove Source"
+                        </h5>
+                        <button
+                            type="button"
+                            class="btn-close"
+                            aria-label="Close"
+                            on:click=move |_| on_cancel.run(())
+                        ></button>
+                    </div>
+                    <div class="modal-body">
+                        <p>"Remove " <b>{source.path}</b> " from the library?"</p>
+                        <p class="mb-0">
+                            "Its " {source.mp3s_count}
+                            " MP3s will be removed from the library, playlists, and queue. The files are not deleted."
+                        </p>
+                    </div>
+                    <div class="modal-footer">
+                        <button
+                            type="button"
+                            class="btn btn-secondary"
+                            id="cancel-remove-source"
+                            on:click=move |_| on_cancel.run(())
+                        >
+                            "Cancel"
+                        </button>
+                        <button
+                            type="button"
+                            class="btn btn-danger"
+                            id="confirm-remove-source"
+                            on:click=move |_| on_confirm.run(id)
+                        >
+                            "Remove"
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="modal-backdrop show"></div>
     }
 }
 

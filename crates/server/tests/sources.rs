@@ -5,9 +5,9 @@ use std::path::Path;
 use axum::http::{Method, StatusCode};
 use common::TestApp;
 use player_server::fixtures::{FixtureTags, write_silent_mp3, write_tagged_mp3};
-use player_server::scanner;
 use player_server::source_state::SourceState;
 use player_server::sources;
+use player_server::{library, scanner};
 use serde_json::{Value, json};
 use sqlx::PgPool;
 
@@ -488,6 +488,182 @@ async fn hidden_files_and_directories_are_not_scanned(pool: PgPool) {
     scanned.scan().await;
 
     assert_eq!(scanned.rows().await, Vec::new());
+}
+
+struct TwoSources {
+    app: TestApp,
+    other_id: i64,
+}
+
+async fn insert_song(pool: &PgPool, source_id: i64, artist: &str, album: &str, title: &str) -> i64 {
+    let artist_id = library::find_or_create_artist(pool, artist).await.unwrap();
+    let album_id = library::find_or_create_album(pool, artist_id, album)
+        .await
+        .unwrap();
+
+    sqlx::query_scalar(
+        "INSERT INTO mp3s (source_id, artist_id, album_id, filepath, title) \
+         VALUES ($1, $2, $3, $4, $4) RETURNING id",
+    )
+    .bind(source_id)
+    .bind(artist_id)
+    .bind(album_id)
+    .bind(title)
+    .fetch_one(pool)
+    .await
+    .unwrap()
+}
+
+/// `/music` holds Kept by Band. `/other` holds Encore by Band and Single by
+/// Solo. The queue is Encore, Kept, Single and the Mix playlist is Single,
+/// Kept, Encore.
+async fn two_sources(pool: PgPool) -> TwoSources {
+    let app = TestApp::logged_in(pool).await;
+    let pool = app.pool();
+    let music_id = common::source_id(pool, "/music").await;
+    let other_id = common::source_id(pool, "/other").await;
+
+    let kept = insert_song(pool, music_id, "Band", "Record", "Kept").await;
+    let encore = insert_song(pool, other_id, "Band", "Live", "Encore").await;
+    let single = insert_song(pool, other_id, "Solo", "Alone", "Single").await;
+
+    for (position, mp3_id) in [(1, encore), (2, kept), (3, single)] {
+        sqlx::query("INSERT INTO queued_mp3s (mp3_id, position) VALUES ($1, $2)")
+            .bind(mp3_id)
+            .bind(position)
+            .execute(pool)
+            .await
+            .unwrap();
+    }
+
+    let playlist_id: i64 =
+        sqlx::query_scalar("INSERT INTO playlists (name) VALUES ('Mix') RETURNING id")
+            .fetch_one(pool)
+            .await
+            .unwrap();
+
+    for (position, mp3_id) in [(1, single), (2, kept), (3, encore)] {
+        sqlx::query(
+            "INSERT INTO playlist_mp3s (playlist_id, mp3_id, position) VALUES ($1, $2, $3)",
+        )
+        .bind(playlist_id)
+        .bind(mp3_id)
+        .bind(position)
+        .execute(pool)
+        .await
+        .unwrap();
+    }
+
+    TwoSources { app, other_id }
+}
+
+impl TwoSources {
+    async fn destroy_other(&mut self) -> (StatusCode, Value) {
+        let path = format!("/api/sources/{}", self.other_id);
+
+        self.app.send(Method::DELETE, &path, None).await
+    }
+
+    async fn strings(&self, sql: &str) -> Vec<String> {
+        sqlx::query_scalar(sql)
+            .fetch_all(self.app.pool())
+            .await
+            .unwrap()
+    }
+
+    async fn positions(&self, sql: &str) -> Vec<(String, i32)> {
+        sqlx::query_as(sql)
+            .fetch_all(self.app.pool())
+            .await
+            .unwrap()
+    }
+}
+
+#[sqlx::test]
+async fn destroy_removes_the_source(pool: PgPool) {
+    let mut library = two_sources(pool).await;
+
+    let response = library.destroy_other().await;
+
+    assert_eq!(
+        response,
+        (StatusCode::OK, json!({"message": "Source removed"}))
+    );
+    assert_eq!(
+        library.strings("SELECT path FROM sources").await,
+        vec!["/music"]
+    );
+}
+
+#[sqlx::test]
+async fn destroy_removes_only_the_mp3s_of_the_source(pool: PgPool) {
+    let mut library = two_sources(pool).await;
+
+    library.destroy_other().await;
+
+    assert_eq!(
+        library.strings("SELECT title FROM mp3s").await,
+        vec!["Kept"]
+    );
+}
+
+#[sqlx::test]
+async fn destroy_closes_the_gaps_left_in_the_queue(pool: PgPool) {
+    let mut library = two_sources(pool).await;
+
+    library.destroy_other().await;
+
+    assert_eq!(
+        library
+            .positions(
+                "SELECT m.title, q.position FROM queued_mp3s q \
+                 JOIN mp3s m ON m.id = q.mp3_id ORDER BY q.position"
+            )
+            .await,
+        vec![("Kept".to_string(), 1)]
+    );
+}
+
+#[sqlx::test]
+async fn destroy_closes_the_gaps_left_in_playlists(pool: PgPool) {
+    let mut library = two_sources(pool).await;
+
+    library.destroy_other().await;
+
+    assert_eq!(
+        library
+            .positions(
+                "SELECT m.title, pm.position FROM playlist_mp3s pm \
+                 JOIN mp3s m ON m.id = pm.mp3_id ORDER BY pm.position"
+            )
+            .await,
+        vec![("Kept".to_string(), 1)]
+    );
+}
+
+#[sqlx::test]
+async fn destroy_deletes_artists_and_albums_left_without_mp3s(pool: PgPool) {
+    let mut library = two_sources(pool).await;
+
+    library.destroy_other().await;
+
+    assert_eq!(
+        (
+            library.strings("SELECT name FROM artists").await,
+            library.strings("SELECT name FROM albums").await,
+        ),
+        (vec!["Band".to_string()], vec!["Record".to_string()])
+    );
+}
+
+#[sqlx::test]
+async fn destroy_of_a_missing_source_is_404(pool: PgPool) {
+    let mut app = TestApp::logged_in(pool).await;
+
+    assert_eq!(
+        app.send(Method::DELETE, "/api/sources/5", None).await.0,
+        StatusCode::NOT_FOUND
+    );
 }
 
 #[test]

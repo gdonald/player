@@ -228,3 +228,15 @@ test("recording a played song with an ended session returns to the login form", 
 
   await expect(loginForm(page)).toBeVisible();
 });
+
+test("a failed source removal shows the error and keeps the source", async ({ page }) => {
+  await failRequests(page, "DELETE", /^\/api\/sources\/\d+$/);
+  await logIn(page);
+  await menu(page, "Sources").click();
+
+  await page.locator("#source-1 .remove-source").click();
+  await page.click("#confirm-remove-source");
+
+  await expect(alert(page)).toContainText("Request failed (500)");
+  await expect(page.locator("#source-1")).toBeVisible();
+});

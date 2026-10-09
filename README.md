@@ -26,7 +26,7 @@ The first run creates the `player_development` database (or the one named in `DA
 
 ## Running
 
-`./run.sh` starts the server on `PORT` (default 4000) and `trunk serve` on `HOST` (default 127.0.0.1) port 9000, which proxies `/api/` to the server. Open port 9000 on `HOST`, log in, add your music directory on the Sources page, and press Scan. Scan again after the music directory changes.
+`./run.sh` starts the server on `PORT` (default 4000) and `trunk serve` on `HOST` (default 127.0.0.1) port 9000, which proxies `/api/` to the server. Open port 9000 on `HOST`, log in, add your music directory on the Sources page, and press Scan. Scan again after the music directory changes. Remove takes a source's songs out of the library, playlists, and queue, and leaves the files on disk.
 
 For a single process, build the client with `trunk build` in `crates/client` and run `player serve`, which serves `crates/client/dist` (or `WEB_ROOT`) on `PORT` (default 3000).
 

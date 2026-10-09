@@ -302,6 +302,19 @@ impl Ctx {
         });
     }
 
+    /// Loads the queue after entries were removed on the server. Playback
+    /// stops when the playing entry is gone.
+    pub fn reload_queue(&self) {
+        let ctx = *self;
+        spawn_local(async move {
+            ctx.apply_queue(api::get("/api/queued_mp3s").await);
+
+            if ctx.current_id().is_some_and(|id| ctx.entry(id).is_none()) {
+                ctx.play(None);
+            }
+        });
+    }
+
     pub fn enqueue_mp3(&self, mp3_id: i64) {
         let ctx = *self;
         let body = wrap(&QueuedMp3Params {

@@ -75,7 +75,10 @@ pub fn api(state: AppState) -> Router<AppState> {
         .route("/sources", get(sources_index).post(sources_create))
         .route(
             "/sources/{id}",
-            get(sources_show).put(sources_update).patch(sources_update),
+            get(sources_show)
+                .put(sources_update)
+                .patch(sources_update)
+                .delete(sources_destroy),
         )
         .route("/sources/{id}/scan", get(sources_scan))
         .route_layer(middleware::from_fn_with_state(state, require_user));
@@ -457,6 +460,17 @@ async fn sources_update(
     Ok(Json(SourceResponse {
         message: Some("Source updated".to_string()),
         source,
+    }))
+}
+
+async fn sources_destroy(
+    State(state): State<AppState>,
+    Path(id): Path<i64>,
+) -> AppResult<Json<MessageResponse>> {
+    sources::delete(&state.pool, id).await?;
+
+    Ok(Json(MessageResponse {
+        message: "Source removed".to_string(),
     }))
 }
 
