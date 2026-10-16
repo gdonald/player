@@ -135,6 +135,16 @@ mod tests {
     }
 
     #[test]
+    fn silent_file_longer_than_an_hour_reads_longer_than_an_hour() {
+        let directory = tempfile::tempdir().unwrap();
+        let path = directory.path().join("two-hours.mp3");
+
+        write_silent_mp3(&path, 7200).unwrap();
+
+        assert!(tags::read(&path).unwrap().length_seconds > 7000);
+    }
+
+    #[test]
     fn tags_left_out_stay_unset() {
         let directory = tempfile::tempdir().unwrap();
         let path = directory.path().join("bare-tags.mp3");
