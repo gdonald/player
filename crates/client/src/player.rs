@@ -1,8 +1,9 @@
-use leptos::ev::{Event, KeyboardEvent, MouseEvent};
+use leptos::ev::{Event, KeyboardEvent, MouseEvent, WheelEvent};
 use leptos::html;
 use leptos::prelude::*;
 use player_core::playback;
 use player_core::settings::VOLUME;
+use player_core::wheel;
 use wasm_bindgen::JsCast;
 use wasm_bindgen::closure::Closure;
 use web_sys::{
@@ -22,6 +23,7 @@ const MARQUEE_SPEED: f64 = 20.0;
 const MARQUEE_MOVING_SHARE: f64 = 0.7;
 const POSITION_FRAME: std::time::Duration = std::time::Duration::from_millis(50);
 const NOTHING_PLAYING: &str = "Nothing playing";
+const VOLUME_WHEEL_STEP: f64 = 0.05;
 
 /// `navigator.mediaSession`, when the browser has it.
 fn media_session() -> Option<MediaSession> {
@@ -63,6 +65,14 @@ pub fn Player() -> impl IntoView {
     let position = RwSignal::new(0.0_f64);
     let volume = RwSignal::new(playback::parse_volume(Some(&settings::get(ctx, VOLUME))));
     let muted = RwSignal::new(false);
+
+    let set_volume = move |level: f64| {
+        let level = level.clamp(0.0, 1.0);
+
+        volume.set(level);
+        muted.set(false);
+        settings::set(ctx, VOLUME, level.to_string());
+    };
 
     let has_track = move || ctx.current.with(Option::is_some);
     let has_queue = move || ctx.queue.with(|queue| !queue.is_empty());
@@ -314,11 +324,16 @@ pub fn Player() -> impl IntoView {
                         step="0.01"
                         prop:value=move || volume.get().to_string()
                         style=move || progress_style(volume.get() * 100.0)
-                        on:input=move |event| {
-                            let level = range_value(&event).clamp(0.0, 1.0);
-                            volume.set(level);
-                            muted.set(false);
-                            settings::set(ctx, VOLUME, level.to_string());
+                        on:input=move |event| set_volume(range_value(&event))
+                        on:wheel=move |event: WheelEvent| {
+                            event.prevent_default();
+                            set_volume(wheel::step_value(
+                                volume.get_untracked(),
+                                event.delta_y(),
+                                VOLUME_WHEEL_STEP,
+                                0.0,
+                                1.0,
+                            ));
                         }
                     />
                 </div>

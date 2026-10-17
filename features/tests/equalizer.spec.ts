@@ -87,6 +87,31 @@ test("moving a band makes the preset custom and turns the equalizer on", async (
   await expect(gainLabels(page).nth(6)).toHaveText("+4.5");
 });
 
+test("the mouse wheel over a band steps its gain", async ({ page }) => {
+  await openPanel(page);
+  await page.locator("#equalizer-band-5").hover();
+
+  await page.mouse.wheel(0, -100);
+  await page.mouse.wheel(0, -100);
+
+  await expect(gainLabels(page).nth(6)).toHaveText("+1");
+  await expect(page.locator("#equalizer-preset")).toHaveValue("Custom");
+
+  await page.mouse.wheel(0, 100);
+
+  await expect(gainLabels(page).nth(6)).toHaveText("+0.5");
+});
+
+test("the mouse wheel over the preamp steps the preamp", async ({ page }) => {
+  await openPanel(page);
+  await page.locator("#equalizer-preamp").hover();
+
+  await page.mouse.wheel(0, 100);
+
+  await expect(gainLabels(page).first()).toHaveText("-0.5");
+  await expect.poll(() => storedSettings()).toBe("on;-0.5;0,0,0,0,0,0,0,0,0,0");
+});
+
 test("reset flattens the bands and the preamp", async ({ page }) => {
   await openPanel(page);
   await page.selectOption("#equalizer-preset", "Rock");

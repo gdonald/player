@@ -1,14 +1,16 @@
-use leptos::ev::{KeyboardEvent, MouseEvent, SubmitEvent};
+use leptos::ev::{KeyboardEvent, MouseEvent, SubmitEvent, WheelEvent};
 use leptos::html;
 use leptos::prelude::*;
 use player_core::equalizer::{self, BANDS, CUSTOM, FLAT, Gains, NameProblem, PRESETS, SavedPreset};
 use player_core::settings::EQUALIZER_OPEN;
+use player_core::wheel;
 
 use crate::settings;
 use crate::state::ctx;
 
 const CURVE_WIDTH: f32 = 90.0;
 const CURVE_HEIGHT: f32 = 20.0;
+const GAIN_WHEEL_STEP: f64 = 0.5;
 
 fn stored_open() -> bool {
     settings::get(ctx(), EQUALIZER_OPEN) == "true"
@@ -134,6 +136,21 @@ pub fn Equalizer() -> impl IntoView {
                 style=move || slider_style(gain.get())
                 on:input=move |event| {
                     set.run(equalizer::clamp_gain(event_target_value(&event).parse().unwrap_or(0.0)));
+                }
+                on:wheel=move |event: WheelEvent| {
+                    event.prevent_default();
+
+                    let max_gain = f64::from(equalizer::MAX_GAIN);
+                    let stepped = wheel::step_value(
+                        f64::from(gain.get_untracked()),
+                        event.delta_y(),
+                        GAIN_WHEEL_STEP,
+                        -max_gain,
+                        max_gain,
+                    );
+
+                    #[allow(clippy::cast_possible_truncation, reason = "a gain between -12 and 12 dB")]
+                    set.run(stepped as f32);
                 }
             />
         }

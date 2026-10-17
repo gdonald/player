@@ -243,6 +243,23 @@ test("the volume slider sets the volume and is remembered", async ({ page }) => 
   await expect.poll(() => volumeLevel(page)).toBeCloseTo(0.3);
 });
 
+test("the mouse wheel over the volume slider steps the volume", async ({ page }) => {
+  await captureVolume(page);
+  await play(page, "Encore");
+  await page.locator("#player-volume").hover();
+
+  await page.mouse.wheel(0, 100);
+  await page.mouse.wheel(0, 100);
+
+  await expect(page.locator("#player-volume")).toHaveValue("0.9");
+  await expect.poll(() => volumeLevel(page)).toBeCloseTo(0.9);
+  await expect.poll(() => storedSetting("volume")).toBe("0.9");
+
+  await page.mouse.wheel(0, -100);
+
+  await expect(page.locator("#player-volume")).toHaveValue("0.95");
+});
+
 test("the mute button mutes and unmutes", async ({ page }) => {
   await captureVolume(page);
   await play(page, "Encore");
