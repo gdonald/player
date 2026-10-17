@@ -39,6 +39,20 @@
   --st-font: Tahoma, Verdana, "Segoe UI", Arial, sans-serif;
   --st-digits: "Courier New", Consolas, monospace;
 
+  --slider-low: var(--vis-bar-low);
+  --slider-mid: var(--vis-bar-mid);
+  --slider-high: var(--vis-bar-high);
+  --equalizer-groove: linear-gradient(
+    to right,
+    transparent 3px,
+    #505050 3px,
+    #565656 4px,
+    #565656 6px,
+    #505050 6px,
+    #505050 7px,
+    transparent 7px
+  );
+
   --vis-background: var(--st-lcd);
   --vis-bar-low: #0078ff;
   --vis-bar-mid: #00ccff;
@@ -238,7 +252,7 @@ body {
 .winamp-volume {
   background:
     var(--st-groove) right / calc(100% - var(--progress, 0%)) 100% no-repeat,
-    linear-gradient(to right, #1fbf1f, #e0d020 60%, #e03a1a);
+    linear-gradient(to right, var(--slider-low), var(--slider-mid) 55%, var(--slider-high));
 }
 
 .winamp-seek::-webkit-slider-thumb,
@@ -310,24 +324,10 @@ body {
 .equalizer-slider {
   border: none;
   background:
-    linear-gradient(
-      to top,
-      transparent var(--from, 50%),
-      hsl(var(--hue, 60) 85% 48%) var(--from, 50%),
-      hsl(var(--hue, 60) 85% 48%) var(--to, 50%),
-      transparent var(--to, 50%)
-    )
-    3px 0 / 4px 100% no-repeat,
-    linear-gradient(
-      to right,
-      transparent 3px,
-      #505050 3px,
-      #565656 4px,
-      #565656 6px,
-      #505050 6px,
-      #505050 7px,
-      transparent 7px
-    );
+    var(--equalizer-groove) bottom / 100% var(--from, 50%) no-repeat,
+    var(--equalizer-groove) top / 100% calc(100% - var(--to, 50%)) no-repeat,
+    linear-gradient(to top, var(--slider-low), var(--slider-mid) 55%, var(--slider-high))
+      3px 0 / 4px 100% no-repeat;
 }
 
 .equalizer-slider::-webkit-slider-thumb {

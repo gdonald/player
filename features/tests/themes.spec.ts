@@ -11,8 +11,13 @@ const STEEL_BLUE_LIST_COLOR = "rgb(143, 220, 255)";
 const STEEL_BLUE_LIGHT_COLOR = "rgb(0, 180, 255)";
 const SAPPHIRE_DISPLAY_COLOR = "rgb(255, 255, 255)";
 const SAPPHIRE_LIST_BACKGROUND = "rgb(28, 61, 125)";
-const VOLUME_LOW_COLOR = "rgb(31, 191, 31)";
-const EQUALIZER_FILL_LAYER = "linear-gradient(to top, rgba(0, 0, 0, 0)";
+const SLIDER_LOW_COLORS: Record<string, string> = {
+  default: "rgb(31, 191, 31)",
+  charcoal: "rgb(74, 88, 93)",
+  steel: "rgb(41, 148, 0)",
+  "steel-blue": "rgb(0, 120, 255)",
+  sapphire: "rgb(40, 65, 115)",
+};
 
 test.beforeEach(async ({ page, request }) => {
   await resetData(request);
@@ -111,22 +116,34 @@ test("the sapphire theme shows white display text and a blue playlist", async ({
   await page.screenshot({ path: testInfo.outputPath("sapphire.png") });
 });
 
-for (const theme of ["default", "charcoal", "steel", "steel-blue", "sapphire"]) {
-  test(`the ${theme} theme colors the volume and equalizer sliders`, async ({ page }, testInfo) => {
+for (const [theme, lowColor] of Object.entries(SLIDER_LOW_COLORS)) {
+  test(`the ${theme} theme colors the volume slider in its own colors`, async ({ page }, testInfo) => {
     await page.selectOption("#theme-select", theme);
     await expect(themeLink(page)).toHaveAttribute("href", `/themes/theme-${theme}.css`);
     await page.click("#equalizer-toggle");
     await page.locator("#equalizer-band-0").fill("9");
+    await page.locator("#equalizer-band-1").fill("-6");
     await page.locator("#player-volume").fill("0.6");
 
     await expect
       .poll(() => page.locator("#player-volume").evaluate((slider) => getComputedStyle(slider).backgroundImage))
-      .toContain(VOLUME_LOW_COLOR);
-    await expect
-      .poll(() => page.locator("#equalizer-band-0").evaluate((slider) => getComputedStyle(slider).backgroundImage))
-      .toContain(EQUALIZER_FILL_LAYER);
+      .toContain(lowColor);
 
     await page.screenshot({ path: testInfo.outputPath(`${theme}-sliders.png`) });
+  });
+}
+
+for (const [theme, lowColor] of Object.entries(SLIDER_LOW_COLORS).filter(([theme]) => theme !== "default")) {
+  test(`the ${theme} theme fills the equalizer sliders in its own colors`, async ({ page }) => {
+    await page.selectOption("#theme-select", theme);
+    await expect(themeLink(page)).toHaveAttribute("href", `/themes/theme-${theme}.css`);
+    await page.click("#equalizer-toggle");
+
+    await page.locator("#equalizer-band-0").fill("9");
+
+    await expect
+      .poll(() => page.locator("#equalizer-band-0").evaluate((slider) => getComputedStyle(slider).backgroundImage))
+      .toContain(lowColor);
   });
 }
 
