@@ -235,6 +235,12 @@ body {
   background: var(--st-groove);
 }
 
+.winamp-volume {
+  background:
+    var(--st-groove) right / calc(100% - var(--progress, 0%)) 100% no-repeat,
+    linear-gradient(to right, #1fbf1f, #e0d020 60%, #e03a1a);
+}
+
 .winamp-seek::-webkit-slider-thumb,
 .winamp-volume::-webkit-slider-thumb {
   width: 28px;
@@ -303,16 +309,25 @@ body {
 
 .equalizer-slider {
   border: none;
-  background: linear-gradient(
-    to right,
-    transparent 3px,
-    #505050 3px,
-    #565656 4px,
-    #565656 6px,
-    #505050 6px,
-    #505050 7px,
-    transparent 7px
-  );
+  background:
+    linear-gradient(
+      to top,
+      transparent var(--from, 50%),
+      hsl(var(--hue, 60) 85% 48%) var(--from, 50%),
+      hsl(var(--hue, 60) 85% 48%) var(--to, 50%),
+      transparent var(--to, 50%)
+    )
+    3px 0 / 4px 100% no-repeat,
+    linear-gradient(
+      to right,
+      transparent 3px,
+      #505050 3px,
+      #565656 4px,
+      #565656 6px,
+      #505050 6px,
+      #505050 7px,
+      transparent 7px
+    );
 }
 
 .equalizer-slider::-webkit-slider-thumb {
