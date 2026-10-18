@@ -464,7 +464,8 @@ body,
   border-collapse: collapse;
 }
 
-.playlist-row {
+.playlist-row,
+.playlist-list-row {
   cursor: default;
   user-select: none;
 }

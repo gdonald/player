@@ -54,9 +54,8 @@ pub fn Playlists() -> impl IntoView {
 
         view! {
             <tr
-                class="align-middle"
+                class="align-middle playlist-list-row"
                 id=format!("playlist-{id}")
-                title="Double-click to enqueue"
                 on:dblclick=move |_| ctx.enqueue_playlist(id)
             >
                 <td>{playlist.name}</td>

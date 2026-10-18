@@ -167,6 +167,10 @@ test("double-clicking a playlist queues it and plays its first song", async ({ p
   await expect(currentQueueRow(page)).toContainText("Opening Song");
 });
 
+test("hovering a playlist's name shows the arrow cursor, not a text cursor", async ({ page }) => {
+  await expect(page.locator(`#playlist-${playlistId} td`).first()).toHaveCSS("cursor", "default");
+});
+
 test("double-clicking a playlist while a song plays adds it to the end and keeps the playing song", async ({ page }) => {
   await page.locator(`#playlist-${playlistId} .enqueue-playlist`).click();
   await waitUntilPlaying(page);
