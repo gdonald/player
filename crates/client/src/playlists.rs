@@ -53,11 +53,21 @@ pub fn Playlists() -> impl IntoView {
         let chosen = playlist.clone();
 
         view! {
-            <tr class="align-middle" id=format!("playlist-{id}")>
+            <tr
+                class="align-middle"
+                id=format!("playlist-{id}")
+                title="Double-click to enqueue"
+                on:dblclick=move |_| ctx.enqueue_playlist(id)
+            >
                 <td>{playlist.name}</td>
                 <td class="text-center">{playlist.mp3s_count}</td>
                 <td class="tight">
-                    <div class="btn-group" role="group" aria-label="Playlist actions">
+                    <div
+                        class="btn-group"
+                        role="group"
+                        aria-label="Playlist actions"
+                        on:dblclick=|event: MouseEvent| event.stop_propagation()
+                    >
                         <Show when=move || { playlist.mp3s_count > 0 }>
                             <button
                                 class="btn btn-sm btn-primary enqueue-playlist"

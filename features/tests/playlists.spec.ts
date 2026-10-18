@@ -160,6 +160,30 @@ test("enqueue from the list queues the playlist and starts it", async ({ page })
   await expect(currentQueueRow(page)).toContainText("Opening Song");
 });
 
+test("double-clicking a playlist queues it and plays its first song", async ({ page }) => {
+  await page.locator(`#playlist-${playlistId} td`).first().dblclick();
+
+  await expect.poll(() => queueTitles(page)).toEqual(["Opening Song", "Encore", "Second Song"]);
+  await expect(currentQueueRow(page)).toContainText("Opening Song");
+});
+
+test("double-clicking a playlist while a song plays adds it to the end and keeps the playing song", async ({ page }) => {
+  await page.locator(`#playlist-${playlistId} .enqueue-playlist`).click();
+  await waitUntilPlaying(page);
+
+  await page.locator(`#playlist-${playlistId} td`).first().dblclick();
+
+  await expect.poll(() => queueTitles(page)).toHaveLength(6);
+  await expect(currentQueueRow(page).locator(".playlist-name")).toHaveText(/^1\. .* - Opening Song$/);
+});
+
+test("double-clicking a playlist's enqueue button queues it once per click and not again from the row", async ({ page }) => {
+  await page.locator(`#playlist-${playlistId} .enqueue-playlist`).dblclick();
+
+  await expect.poll(() => queueTitles(page)).toHaveLength(6);
+  await expect(currentQueueRow(page).locator(".playlist-name")).toHaveText(/^1\. .* - Opening Song$/);
+});
+
 test("next on an enqueued playlist plays the following song", async ({ page }) => {
   await page.locator(`#playlist-${playlistId} .enqueue-playlist`).click();
   await waitUntilPlaying(page);
