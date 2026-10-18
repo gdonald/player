@@ -1,12 +1,15 @@
 name: CI
 
+# Runs after the home lab's Jenkins build passes and reports the
+# continuous-integration/jenkins/branch commit status. A status event runs
+# this file from the default branch, so the job checks out the commit the
+# status is for.
 on:
-  push:
-    branches: [main]
-  pull_request:
+  status
 
 jobs:
   test:
+    if: github.event.context == 'continuous-integration/jenkins/branch' && github.event.state == 'success'
     runs-on: ubuntu-latest
 
     services:
@@ -34,6 +37,8 @@ jobs:
 
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.sha }}
 
       # Nightly is installed first because the action makes the last toolchain
       # the default, and test.sh expects stable as the default with nightly

@@ -58,6 +58,19 @@ test("play after a reload continues from the saved position", async ({ page }) =
   await expect.poll(() => position(page)).toBeGreaterThan(20);
 });
 
+test("the seek bar shows the saved position as soon as the song's length is known", async ({ page }) => {
+  const entryId = await queueEntryId("Encore");
+  await storeSetting("resume", `${entryId};20.0`);
+  await page.clock.install();
+  await page.clock.pauseAt(new Date(Date.now() + 60_000));
+  await logIn(page);
+
+  await expect.poll(() => transport(page)).toBe("paused");
+  await songLength(page);
+
+  await expect.poll(() => position(page)).toBeCloseTo(20, 0);
+});
+
 test("a saved entry that left the queue is not restored", async ({ page }) => {
   await storeSetting("resume", "999999;5.0");
   await logIn(page);

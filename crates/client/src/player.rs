@@ -118,6 +118,13 @@ pub fn Player() -> impl IntoView {
         .expect("the browser runs intervals");
     on_cleanup(move || follow.clear());
 
+    // The seek bar clamps its value to its max, so a position set before the
+    // song's length was known is set again once it is.
+    Effect::new(move |_| {
+        duration.track();
+        position.set(engine.position());
+    });
+
     let space_toggles = window_event_listener(leptos::ev::keydown, move |event: KeyboardEvent| {
         let toggles = event
             .target()

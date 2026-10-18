@@ -54,7 +54,7 @@ Runs formatting and lint checks, the Rust tests, and the Playwright browser test
 
 Coverage reports go to `target/coverage/html/index.html` for the server and `target/coverage/client/index.html` for the client. The browser tests run on 10 workers, or as many as `BROWSER_WORKERS` sets.
 
-CI runs `./test.sh` on every push to `main` and every pull request.
+CI runs `./test.sh` in two places, in order. The home lab's Jenkins runs it first, for every branch, using `Jenkinsfile` and the image built from `ci/Dockerfile`. When that passes, Jenkins reports the `continuous-integration/jenkins/branch` status, which starts the GitHub workflow in `.github/workflows/ci.yml` on the same commit.
 
 ## Deploying
 
