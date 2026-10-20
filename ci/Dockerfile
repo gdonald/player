@@ -1,7 +1,8 @@
 # The image the home lab's Jenkins runs test.sh in. It carries what the GitHub
 # workflow installs step by step: stable and nightly Rust with the wasm32
 # target and llvm-tools, cargo-llvm-cov, trunk, Node 22, Playwright's system
-# libraries, and the Postgres client tools test.sh resets databases with.
+# libraries, the Postgres client tools test.sh resets databases with, and clang,
+# which minicov uses to compile its coverage runtime for wasm32.
 # Playwright's Chromium itself is downloaded by the Jenkinsfile, so it always
 # matches the version in features/package-lock.json.
 #
@@ -15,6 +16,7 @@ RUN apt-get update \
   && apt-get install -y --no-install-recommends \
        build-essential \
        ca-certificates \
+       clang \
        curl \
        git \
        jq \
