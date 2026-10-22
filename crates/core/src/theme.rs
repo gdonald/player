@@ -12,7 +12,7 @@ impl Theme {
 }
 
 /// Every theme, the default first.
-pub const THEMES: [Theme; 5] = [
+pub const THEMES: [Theme; 6] = [
     Theme {
         name: "default",
         label: "Default",
@@ -20,6 +20,10 @@ pub const THEMES: [Theme; 5] = [
     Theme {
         name: "charcoal",
         label: "Charcoal",
+    },
+    Theme {
+        name: "charcoal-red",
+        label: "Charcoal Red",
     },
     Theme {
         name: "steel",

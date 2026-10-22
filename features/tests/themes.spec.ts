@@ -5,6 +5,7 @@ import { logIn, resetData, storedSetting, storeSetting } from "./helpers";
 const DEFAULT_TITLE_COLOR = "rgb(217, 199, 108)";
 const CHARCOAL_TITLE_COLOR = "rgb(211, 212, 215)";
 const CHARCOAL_DISPLAY_COLOR = "rgb(162, 193, 204)";
+const CHARCOAL_RED_DISPLAY_COLOR = "rgb(255, 42, 31)";
 const STEEL_DISPLAY_COLOR = "rgb(244, 244, 244)";
 const STEEL_LIST_COLOR = "rgb(185, 241, 185)";
 const STEEL_BLUE_LIST_COLOR = "rgb(143, 220, 255)";
@@ -14,6 +15,7 @@ const SAPPHIRE_LIST_BACKGROUND = "rgb(28, 61, 125)";
 const SLIDER_LOW_COLORS: Record<string, string> = {
   default: "rgb(31, 191, 31)",
   charcoal: "rgb(74, 88, 93)",
+  "charcoal-red": "rgb(74, 88, 93)",
   steel: "rgb(41, 148, 0)",
   "steel-blue": "rgb(0, 120, 255)",
   sapphire: "rgb(40, 65, 115)",
@@ -60,6 +62,23 @@ test("the charcoal theme shows display text in pale blue-gray", async ({ page })
       .poll(() => page.locator(selector).first().evaluate((element) => getComputedStyle(element).color))
       .toBe(CHARCOAL_DISPLAY_COLOR);
   }
+});
+
+test("the charcoal red theme shows display and playlist text in LED red", async ({ page }, testInfo) => {
+  await page.selectOption("#theme-select", "charcoal-red");
+  await expect(themeLink(page)).toHaveAttribute("href", "/themes/theme-charcoal-red.css");
+
+  for (const selector of ["#player-position", "#player-title", "#player-duration", ".library-count"]) {
+    await expect
+      .poll(() => page.locator(selector).first().evaluate((element) => getComputedStyle(element).color))
+      .toBe(CHARCOAL_RED_DISPLAY_COLOR);
+  }
+  await page.mouse.move(0, 0);
+  await expect
+    .poll(() => page.locator("#mp3s tbody td").nth(1).evaluate((element) => getComputedStyle(element).color))
+    .toBe(CHARCOAL_RED_DISPLAY_COLOR);
+
+  await page.screenshot({ path: testInfo.outputPath("charcoal-red.png") });
 });
 
 test("the steel theme shows white display text and green playlist text", async ({ page }, testInfo) => {
